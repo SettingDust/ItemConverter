@@ -57,7 +57,7 @@ unimined.minecraft {
     mappings {
         intermediary()
         mojmap()
-        parchment(version = "2022.11.27")
+        parchment(mcVersion = "1.19.4", version = "2023.06.26")
 
         devFallbackNamespace("official")
     }

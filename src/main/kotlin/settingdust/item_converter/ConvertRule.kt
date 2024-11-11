@@ -1,8 +1,7 @@
 package settingdust.item_converter
 
-import com.mojang.serialization.Codec
+import com.google.common.graph.ValueGraphBuilder
 import com.mojang.serialization.codecs.RecordCodecBuilder
-import net.minecraft.advancements.critereon.ItemPredicate
 import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.ItemStack
@@ -16,20 +15,21 @@ object ConvertRules {
     lateinit var REGISTRY: Supplier<IForgeRegistry<ConvertRule>>
         internal set
 
+    @Suppress("UnstableApiUsage")
+    val graph = ValueGraphBuilder.directed().allowsSelfLoops(false).build<SimpleItemPredicate, Double>()
+
     fun key(name: ResourceLocation) = ResourceKey.create(KEY, name)
 }
 
 data class ConvertRule(
-    val input: ItemPredicate,
-    val output: List<ItemStack>,
-    val consumeDamage: Boolean = false
+    val input: ItemStack,
+    val output: List<ItemStack>
 ) {
     companion object {
         val CODEC = RecordCodecBuilder.create<ConvertRule> { instance ->
             instance.group(
-                MoreCodecs.ITEM_PREDICATE.fieldOf("input").forGetter { it.input },
-                MoreCodecs.ITEM_STACK.listOf().fieldOf("output").forGetter { it.output },
-                Codec.BOOL.optionalFieldOf("consume_damage", false).forGetter { it.consumeDamage }
+                MoreCodecs.ITEM_STACK.fieldOf("input").forGetter { it.input },
+                MoreCodecs.ITEM_STACK.listOf().fieldOf("output").forGetter { it.output }
             ).apply(instance, ::ConvertRule)
         }
     }

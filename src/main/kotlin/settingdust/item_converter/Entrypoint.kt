@@ -11,6 +11,7 @@ import net.minecraftforge.event.RegisterCommandsEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.loading.FMLPaths
+import org.apache.logging.log4j.LogManager
 import thedarkcolour.kotlinforforge.forge.FORGE_BUS
 import thedarkcolour.kotlinforforge.forge.MOD_BUS
 import kotlin.io.path.createDirectories
@@ -21,6 +22,7 @@ import kotlin.jvm.optionals.getOrNull
 @Mod(ItemConverter.ID)
 object ItemConverter {
     const val ID = "item_converter"
+    val LOGGER = LogManager.getLogger()
     val exportPath = FMLPaths.GAMEDIR.get() / ".item_converter_generated"
     val gson = GsonBuilder().setPrettyPrinting().create()
 

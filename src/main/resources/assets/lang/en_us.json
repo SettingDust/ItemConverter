@@ -1,3 +1,4 @@
 {
-    "command.item_converter.generate.success": "Generated to %s"
+    "command.item_converter.generate.success": "Generated to %s",
+    "message.item_converter.no_rule": "No rule found for %s"
 }

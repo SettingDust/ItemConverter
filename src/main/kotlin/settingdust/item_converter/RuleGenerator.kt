@@ -5,7 +5,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder
 import it.unimi.dsi.fastutil.Hash.Strategy
 import it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap
 import it.unimi.dsi.fastutil.objects.Object2ReferenceOpenCustomHashMap
-import net.minecraft.advancements.critereon.ItemPredicate
 import net.minecraft.core.Registry
 import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
@@ -90,36 +89,38 @@ data class RecipeRuleGenerator(
                 }).withDefault { 0 }
             for (ingredient in recipe.ingredients) {
                 ingredientCounter[ingredient] = ingredientCounter.getValue(ingredient) + 1
+                if (ingredientCounter.size != 1) return@flatMap emptySet()
             }
-            if (ingredientCounter.size != 1) return@flatMap emptySet()
-            val ingredient = recipe.ingredients.singleOrNull() ?: return@flatMap emptySet()
+            val ingredient = recipe.ingredients.single()
             return@flatMap ingredient.items.map {
-                it.apply {
-                    it.count = ingredientCounter.getValue(ingredient) * it.count
-                } to recipe.resultItem
+                it.apply { it.count = ingredientCounter.getValue(ingredient) * it.count } to recipe.resultItem
             }
         }
         val predicatesToOutputs =
-            Object2ReferenceOpenCustomHashMap<Pair<ItemPredicate, ResourceKey<ConvertRule>>, MutableList<ItemStack>>(
+            Object2ReferenceOpenCustomHashMap<Pair<ItemStack, ResourceKey<ConvertRule>>, MutableList<ItemStack>>(
                 inputToOutput.size,
-                object : Strategy<Pair<ItemPredicate, ResourceKey<ConvertRule>>> {
-                    override fun hashCode(o: Pair<ItemPredicate, ResourceKey<ConvertRule>>?): Int {
-                        return o?.first?.serializeToJson()?.hashCode() ?: 0
+                object : Strategy<Pair<ItemStack, ResourceKey<ConvertRule>>> {
+                    override fun hashCode(o: Pair<ItemStack, ResourceKey<ConvertRule>>?): Int {
+                        return o?.first?.serializeNBT()?.hashCode() ?: 0
                     }
 
                     override fun equals(
-                        a: Pair<ItemPredicate, ResourceKey<ConvertRule>>?,
-                        b: Pair<ItemPredicate, ResourceKey<ConvertRule>>?
+                        a: Pair<ItemStack, ResourceKey<ConvertRule>>?,
+                        b: Pair<ItemStack, ResourceKey<ConvertRule>>?
                     ): Boolean {
-                        return a?.first?.serializeToJson()?.equals(b?.first?.serializeToJson()) == true
+                        return a?.first?.serializeNBT()?.equals(b?.first?.serializeNBT()) == true
                     }
                 })
         for ((input, output) in inputToOutput) {
             val itemKey = ForgeRegistries.ITEMS.getKey(input.item)!!
             predicatesToOutputs.getOrPut(
-                input.toItemPredicate() to ConvertRules.key(
+                input to ConvertRules.key(
                     ItemConverter.id(
-                        "${itemKey.namespace}/${itemKey.path}_${itemCounter.getValue(input.item)}"
+                        "${itemKey.namespace}/${itemKey.path}_${
+                            itemCounter.getValue(
+                                input.item
+                            )
+                        }"
                     )
                 )
             ) {
