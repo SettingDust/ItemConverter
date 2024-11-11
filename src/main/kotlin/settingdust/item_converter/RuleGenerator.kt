@@ -2,12 +2,16 @@ package settingdust.item_converter
 
 import com.mojang.serialization.Codec
 import com.mojang.serialization.codecs.RecordCodecBuilder
+import it.unimi.dsi.fastutil.Hash.Strategy
+import it.unimi.dsi.fastutil.objects.Object2ReferenceOpenCustomHashMap
+import net.minecraft.advancements.critereon.ItemPredicate
 import net.minecraft.core.Registry
 import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.util.ExtraCodecs
 import net.minecraft.world.Container
 import net.minecraft.world.item.Item
+import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.crafting.Recipe
 import net.minecraft.world.item.crafting.RecipeType
 import net.minecraft.world.level.Level
@@ -67,22 +71,38 @@ data class RecipeRuleGenerator(
         val recipeManager = level.recipeManager
         val recipes = recipeManager.getAllRecipesFor(type as RecipeType<Recipe<Container>>)
         var itemCounter = mutableMapOf<Item, Int>().withDefault { 0 }
-        return recipes.flatMap { recipe ->
+        val inputToOutput = recipes.flatMap { recipe ->
             recipe.ingredients.singleOrNull()?.items?.map { it to recipe.resultItem } ?: emptySet()
-        }.fold(mutableMapOf<ResourceKey<ConvertRule>, ConvertRule>()) { map, (input, output) ->
-            val itemKey = ForgeRegistries.ITEMS.getKey(input.item)!!
-            val key = ConvertRules.key(
-                ItemConverter.id(
-                    "${itemKey.namespace}/${itemKey.path}_${
-                        itemCounter.getValue(input.item).also { itemCounter[input.item] = it + 1 }
-                    }"
-                )
-            )
-            map[key] = ConvertRule(
-                input.toItemPredicate(),
-                listOf(output)
-            )
-            map
         }
+        val predicatesToOutputs =
+            Object2ReferenceOpenCustomHashMap<Pair<ItemPredicate, ResourceKey<ConvertRule>>, MutableList<ItemStack>>(
+                inputToOutput.size,
+                object : Strategy<Pair<ItemPredicate, ResourceKey<ConvertRule>>> {
+                    override fun hashCode(o: Pair<ItemPredicate, ResourceKey<ConvertRule>>?): Int {
+                        return o?.first?.serializeToJson()?.hashCode() ?: 0
+                    }
+
+                    override fun equals(
+                        a: Pair<ItemPredicate, ResourceKey<ConvertRule>>?,
+                        b: Pair<ItemPredicate, ResourceKey<ConvertRule>>?
+                    ): Boolean {
+                        return a?.first?.serializeToJson()?.equals(b?.first?.serializeToJson()) == true
+                    }
+                })
+        for ((input, output) in inputToOutput) {
+            val itemKey = ForgeRegistries.ITEMS.getKey(input.item)!!
+            predicatesToOutputs.getOrPut(
+                input.toItemPredicate() to ConvertRules.key(
+                    ItemConverter.id(
+                        "${itemKey.namespace}/${itemKey.path}_${itemCounter.getValue(input.item)}"
+                    )
+                )
+            ) {
+                itemCounter[input.item] = itemCounter.getOrDefault(input.item, -1) + 1
+                mutableListOf()
+            } += output
+        }
+        return predicatesToOutputs
+            .map { entry -> entry.key.second to ConvertRule(entry.key.first, entry.value) }.toMap()
     }
 }

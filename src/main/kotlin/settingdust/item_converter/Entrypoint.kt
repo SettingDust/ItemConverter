@@ -1,12 +1,12 @@
 package settingdust.item_converter
 
+import com.google.gson.GsonBuilder
 import com.mojang.serialization.JsonOps
 import net.minecraft.commands.Commands
 import net.minecraft.commands.arguments.ResourceKeyArgument
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
-import net.minecraft.util.GsonHelper
 import net.minecraftforge.event.RegisterCommandsEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.common.Mod
@@ -22,6 +22,7 @@ import kotlin.jvm.optionals.getOrNull
 object ItemConverter {
     const val ID = "item_converter"
     val exportPath = FMLPaths.GAMEDIR.get() / ".item_converter_generated"
+    val gson = GsonBuilder().setPrettyPrinting().create()
 
     init {
         MOD_BUS.register(ModEventHandler)
@@ -48,7 +49,7 @@ object ItemConverter {
                             val result = ConvertRule.CODEC.encodeStart(JsonOps.INSTANCE, entry.value)
                             path.parent.createDirectories()
                             path.writeText(
-                                GsonHelper.toStableString(
+                                gson.toJson(
                                     result.result().getOrNull() ?: error(
                                         result.error().get().message()
                                     )
