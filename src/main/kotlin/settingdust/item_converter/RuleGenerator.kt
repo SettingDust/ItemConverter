@@ -3,6 +3,7 @@ package settingdust.item_converter
 import com.mojang.serialization.Codec
 import com.mojang.serialization.codecs.RecordCodecBuilder
 import it.unimi.dsi.fastutil.Hash.Strategy
+import it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap
 import it.unimi.dsi.fastutil.objects.Object2ReferenceOpenCustomHashMap
 import net.minecraft.advancements.critereon.ItemPredicate
 import net.minecraft.core.Registry
@@ -12,6 +13,7 @@ import net.minecraft.util.ExtraCodecs
 import net.minecraft.world.Container
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.crafting.Ingredient
 import net.minecraft.world.item.crafting.Recipe
 import net.minecraft.world.item.crafting.RecipeType
 import net.minecraft.world.level.Level
@@ -72,7 +74,30 @@ data class RecipeRuleGenerator(
         val recipes = recipeManager.getAllRecipesFor(type as RecipeType<Recipe<Container>>)
         var itemCounter = mutableMapOf<Item, Int>().withDefault { 0 }
         val inputToOutput = recipes.flatMap { recipe ->
-            recipe.ingredients.singleOrNull()?.items?.map { it to recipe.resultItem } ?: emptySet()
+            var ingredientCounter = Object2IntOpenCustomHashMap<Ingredient>(
+                recipe.ingredients.size,
+                object : Strategy<Ingredient> {
+                    override fun hashCode(o: Ingredient?): Int {
+                        return o?.toJson()?.hashCode() ?: 0
+                    }
+
+                    override fun equals(
+                        a: Ingredient?,
+                        b: Ingredient?
+                    ): Boolean {
+                        return a?.toJson() == b?.toJson()
+                    }
+                }).withDefault { 0 }
+            for (ingredient in recipe.ingredients) {
+                ingredientCounter[ingredient] = ingredientCounter.getValue(ingredient) + 1
+            }
+            if (ingredientCounter.size != 1) return@flatMap emptySet()
+            val ingredient = recipe.ingredients.singleOrNull() ?: return@flatMap emptySet()
+            return@flatMap ingredient.items.map {
+                it.apply {
+                    it.count = ingredientCounter.getValue(ingredient) * it.count
+                } to recipe.resultItem
+            }
         }
         val predicatesToOutputs =
             Object2ReferenceOpenCustomHashMap<Pair<ItemPredicate, ResourceKey<ConvertRule>>, MutableList<ItemStack>>(
