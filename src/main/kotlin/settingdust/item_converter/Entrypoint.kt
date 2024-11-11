@@ -11,6 +11,9 @@ import net.minecraftforge.event.RegisterCommandsEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.loading.FMLPaths
+import thedarkcolour.kotlinforforge.forge.FORGE_BUS
+import thedarkcolour.kotlinforforge.forge.MOD_BUS
+import kotlin.io.path.createDirectories
 import kotlin.io.path.div
 import kotlin.io.path.writeText
 import kotlin.jvm.optionals.getOrNull
@@ -21,13 +24,14 @@ object ItemConverter {
     val exportPath = FMLPaths.GAMEDIR.get() / ".item_converter_generated"
 
     init {
-
+        MOD_BUS.register(ModEventHandler)
+        FORGE_BUS.register(this)
     }
 
     fun id(path: String) = ResourceLocation(ID, path)
 
     @SubscribeEvent
-    fun onRegisterCommands(event: RegisterCommandsEvent) {
+    internal fun onRegisterCommands(event: RegisterCommandsEvent) {
         event.dispatcher.register(Commands.literal(ID).apply {
             then(Commands.literal("generate").apply {
                 then(Commands.argument("generator", ResourceKeyArgument.key(RuleGenerators.KEY)).apply {
@@ -42,6 +46,7 @@ object ItemConverter {
                             val path =
                                 exportPath / entry.key.location().namespace / entry.key.registry().namespace / entry.key.registry().path / "${entry.key.location().path}.json"
                             val result = ConvertRule.CODEC.encodeStart(JsonOps.INSTANCE, entry.value)
+                            path.parent.createDirectories()
                             path.writeText(
                                 GsonHelper.toStableString(
                                     result.result().getOrNull() ?: error(

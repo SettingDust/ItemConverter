@@ -1,0 +1,9 @@
+{
+    "package": "settingdust.item_converter.mixin",
+    "required": true,
+    "refmap": "item_converter.refmap.json",
+    "minVersion": "0.8",
+    "compatibilityLevel": "JAVA_17",
+    "mixins": [
+    ]
+}

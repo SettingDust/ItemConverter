@@ -5,30 +5,25 @@ import com.mojang.serialization.codecs.RecordCodecBuilder
 import net.minecraft.core.Registry
 import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.util.ExtraCodecs
 import net.minecraft.world.Container
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.crafting.Recipe
 import net.minecraft.world.item.crafting.RecipeType
 import net.minecraft.world.level.Level
-import net.minecraftforge.eventbus.api.SubscribeEvent
-import net.minecraftforge.registries.DeferredRegister
 import net.minecraftforge.registries.ForgeRegistries
 import net.minecraftforge.registries.IForgeRegistry
-import net.minecraftforge.registries.NewRegistryEvent
-import net.minecraftforge.registries.RegistryBuilder
 import java.util.function.Supplier
 
 typealias RuleGeneratorType = Codec<out RuleGenerator>
 
 object RuleGeneratorTypes {
     val KEY = ResourceKey.createRegistryKey<RuleGeneratorType>(ItemConverter.id("rule_generator_type"))
-    private val REGISTER = DeferredRegister.create(KEY, ItemConverter.ID)
 
-    val REGISTRY = REGISTER.makeRegistry {
-        RegistryBuilder<RuleGeneratorType>()
-    }
+    val RECIPE = RecipeRuleGenerator.CODEC
 
-    val RECIPE = REGISTER.register("recipe") { RecipeRuleGenerator.CODEC }
+    lateinit var REGISTRY: Supplier<IForgeRegistry<RuleGeneratorType>>
+        internal set
 
     fun key(name: ResourceLocation) = ResourceKey.create(KEY, name)
 }
@@ -36,19 +31,14 @@ object RuleGeneratorTypes {
 object RuleGenerators {
     val KEY = ResourceKey.createRegistryKey<RuleGenerator>(ItemConverter.id("rule_generator"))
     lateinit var REGISTRY: Supplier<IForgeRegistry<RuleGenerator>>
-        private set
+        internal set
 
     fun key(name: ResourceLocation) = ResourceKey.create(KEY, name)
-
-    @SubscribeEvent
-    internal fun onNewRegistry(event: NewRegistryEvent) {
-        REGISTRY = event.create(RegistryBuilder<RuleGenerator>().dataPackRegistry(RuleGenerator.CODEC))
-    }
 }
 
 interface RuleGenerator {
     companion object {
-        val CODEC by lazy {
+        val CODEC = ExtraCodecs.lazyInitializedCodec {
             RuleGeneratorTypes.REGISTRY.get().codec.dispatch({ it.codec }, { it })
         }
     }
@@ -59,17 +49,17 @@ interface RuleGenerator {
 }
 
 data class RecipeRuleGenerator(
-    val typeKey: ResourceKey<RecipeType<*>>
+    val recipeType: ResourceKey<RecipeType<*>>
 ) : RuleGenerator {
     companion object {
         val CODEC = RecordCodecBuilder.create<RecipeRuleGenerator> { instance ->
             instance.group(
-                ResourceKey.codec(Registry.RECIPE_TYPE_REGISTRY).fieldOf("type").forGetter { it.typeKey }
+                ResourceKey.codec(Registry.RECIPE_TYPE_REGISTRY).fieldOf("recipe_type").forGetter { it.recipeType }
             ).apply(instance, ::RecipeRuleGenerator)
         }
     }
 
-    val type = ForgeRegistries.RECIPE_TYPES.getDelegateOrThrow(typeKey).get()
+    val type = ForgeRegistries.RECIPE_TYPES.getDelegateOrThrow(recipeType).get()
 
     override val codec = CODEC
 
@@ -80,11 +70,10 @@ data class RecipeRuleGenerator(
         return recipes.flatMap { recipe ->
             recipe.ingredients.singleOrNull()?.items?.map { it to recipe.resultItem } ?: emptySet()
         }.fold(mutableMapOf<ResourceKey<ConvertRule>, ConvertRule>()) { map, (input, output) ->
+            val itemKey = ForgeRegistries.ITEMS.getKey(input.item)!!
             val key = ConvertRules.key(
                 ItemConverter.id(
-                    "${
-                        ForgeRegistries.ITEMS.getKey(input.item)!!
-                    }_${
+                    "${itemKey.namespace}/${itemKey.path}_${
                         itemCounter.getValue(input.item).also { itemCounter[input.item] = it + 1 }
                     }"
                 )

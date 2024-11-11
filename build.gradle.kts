@@ -76,7 +76,7 @@ dependencies {
     compileOnly(catalog.mixin)
     implementation(catalog.mixinextras.common)
 
-    modImplementation(catalog.kotlin.forge)
+    implementation(catalog.kotlin.forge)
 }
 
 kotlin {
