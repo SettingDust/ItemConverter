@@ -29,6 +29,7 @@ object ItemConverter {
     init {
         MOD_BUS.register(ModEventHandler)
         FORGE_BUS.register(this)
+        Networking
     }
 
     fun id(path: String) = ResourceLocation(ID, path)
