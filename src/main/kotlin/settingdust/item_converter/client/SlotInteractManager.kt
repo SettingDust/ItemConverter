@@ -22,6 +22,7 @@ import thedarkcolour.kotlinforforge.forge.FORGE_BUS
 object SlotInteractManager {
     const val PRESS_TICKS = 20
     var pressedTicks = 0
+    var converting = false
     val KEY = KeyMapping("key.item_converter.slot_interact", InputConstants.KEY_LALT, "key.categories.inventory")
 
     init {
@@ -35,6 +36,7 @@ object SlotInteractManager {
         FORGE_BUS.register { event: ScreenEvent.KeyReleased.Pre ->
             pressedTicks = 0
             KEY.isDown = false
+            converting = false
         }
         FORGE_BUS.register { event: TickEvent.ClientTickEvent ->
             if (event.phase != TickEvent.Phase.END) return@register
@@ -62,9 +64,8 @@ object SlotInteractManager {
                     progress.render(event.poseStack)
                 }
             } else {
-                progress.x = 0
-                progress.y = 0
-                pressedTicks = 0
+                converting = true
+
             }
         }
     }
@@ -75,12 +76,13 @@ data class SlotInteractProgress(
     var y: Int = 0
 ) : GuiComponent(), Widget, IGuiOverlay {
     companion object {
-        val WIDTH = 16
-        val HEIGHT = 2
-        val COLOR = 0xFFF0F0F0.toInt()
+        const val WIDTH = 16
+        const val HEIGHT = 2
+        const val COLOR = 0xFFF0F0F0.toInt()
     }
 
     fun render(poseStack: PoseStack) {
+        if (SlotInteractManager.converting) return
         val progress = (SlotInteractManager.pressedTicks / SlotInteractManager.PRESS_TICKS.toFloat())
         val width = (WIDTH * progress).toInt().coerceIn(0, 1)
         if (width > 0) {
