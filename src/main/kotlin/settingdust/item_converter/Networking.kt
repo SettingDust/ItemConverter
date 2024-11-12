@@ -4,8 +4,11 @@ import com.mojang.serialization.Codec
 import com.mojang.serialization.codecs.RecordCodecBuilder
 import net.minecraft.network.chat.Component
 import net.minecraft.util.StringRepresentable
+import net.minecraft.world.item.ItemStack
 import net.minecraftforge.network.NetworkEvent
 import net.minecraftforge.network.NetworkRegistry
+import org.apache.commons.lang3.math.Fraction
+import org.jgrapht.alg.shortestpath.DijkstraShortestPath
 import java.util.function.Supplier
 
 object Networking {
@@ -25,56 +28,74 @@ object Networking {
     }
 }
 
-data class C2SConvertItemPacket(val slot: Int, val target: Int, val mode: Mode) {
+data class C2SConvertItemPacket(val slot: Int, val target: ItemStack, val mode: Mode) {
     companion object {
         val CODEC = RecordCodecBuilder.create<C2SConvertItemPacket> { instance ->
             instance.group(
                 Codec.INT.fieldOf("slot").forGetter { it.slot },
-                Codec.INT.fieldOf("target").forGetter { it.target },
+                MoreCodecs.ITEM_STACK.fieldOf("target").forGetter { it.target },
                 StringRepresentable.fromEnum { Mode.values() }.fieldOf("mode").forGetter { it.mode }
             ).apply(instance, ::C2SConvertItemPacket)
         }
 
         fun handle(packet: C2SConvertItemPacket, context: Supplier<NetworkEvent.Context>) {
-            context.get().enqueueWork {
-                val player = context.get().sender
-                if (player == null) {
-                    ItemConverter.LOGGER.warn("Received C2SConvertItemPacket from null player.")
-                    return@enqueueWork
-                }
-                val container = player.containerMenu
-                if (container == null) {
-                    ItemConverter.LOGGER.warn("Received C2SConvertItemPacket of null container from ${player.displayName}.")
-                    return@enqueueWork
-                }
-                val slot = container.getSlot(packet.slot)
-                val from = slot.item
-                val registry = player.level.registryAccess().registryOrThrow(ConvertRules.KEY)
-                val rule = registry.firstOrNull { it.input.matches(from) }
-                if (rule == null) {
-                    player.sendSystemMessage(
-                        Component.translatable(
-                            "messages.${ItemConverter.ID}.no_rule",
-                            from.displayName
-                        )
+            val player = context.get().sender
+            if (player == null) {
+                ItemConverter.LOGGER.warn("Received C2SConvertItemPacket from null player.")
+                return
+            }
+            val container = player.containerMenu
+            if (container == null) {
+                ItemConverter.LOGGER.warn("Received C2SConvertItemPacket of null container from ${player.displayName}.")
+                return
+            }
+            val slot = container.getSlot(packet.slot)
+            val fromItem = slot.item
+            val from = ConvertRules.graph.vertexSet().first { it.test(fromItem) }
+            if (from == null) {
+                player.sendSystemMessage(
+                    Component.translatable(
+                        "messages.${ItemConverter.ID}.no_rule",
+                        fromItem.displayName
                     )
-                    return@enqueueWork
-                }
-                val target = rule.output[packet.target].copy()
+                )
+                return
+            }
+            val to = ConvertRules.graph.vertexSet().firstOrNull { it == SimpleItemPredicate(packet.target) }
+            if (to == null) {
+                ItemConverter.LOGGER.error("${player.displayName} trying to convert ${fromItem.displayName} to target not in graph ${packet.target}")
+                return
+            }
+            val path = DijkstraShortestPath.findPathBetween(ConvertRules.graph, from, to)
+            if (path == null) {
+                ItemConverter.LOGGER.error("${player.displayName} trying to convert ${fromItem.displayName} to unreachable target ${packet.target}")
+                return
+            }
+            val ratio = path.edgeList.fold(Fraction.ONE) { acc, (fraction) -> fraction.multiplyBy(acc) }
+            context.get().enqueueWork {
                 when (packet.mode) {
                     Mode.ONE -> {
-                        slot.safeTake(1, 1, player)
-                        if (!player.inventory.add(target)) {
-                            player.drop(target, true)
+                        if (ratio.denominator > fromItem.count) {
+                            return@enqueueWork
+                        }
+                        slot.safeTake(ratio.denominator, ratio.denominator, player)
+                        val itemToInsert = to.predicate.copy().also {
+                            it.count = ratio.numerator
+                        }
+                        if (!player.inventory.add(itemToInsert)) {
+                            player.drop(itemToInsert, true)
                         }
                     }
 
                     Mode.ALL -> {
-                        slot.safeTake(from.count, from.count, player)
-                        for (i in 0 until target.count) {
-                            if (!player.inventory.add(target.copy())) {
-                                player.drop(target, true)
-                            }
+                        val times = fromItem.count / ratio.denominator
+                        val amount = ratio.denominator * times
+                        slot.safeTake(amount, amount, player)
+                        val itemToInsert = to.predicate.copy().also {
+                            it.count = ratio.numerator * times
+                        }
+                        if (!player.inventory.add(itemToInsert)) {
+                            player.drop(itemToInsert, true)
                         }
                     }
                 }

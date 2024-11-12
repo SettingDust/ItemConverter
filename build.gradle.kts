@@ -69,6 +69,7 @@ unimined.minecraft {
 }
 
 val modImplementation by configurations
+val include by configurations
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
@@ -77,6 +78,11 @@ dependencies {
     implementation(catalog.mixinextras.common)
 
     implementation(catalog.kotlin.forge)
+
+    catalog.jgrapht.let {
+        implementation(it)
+        include(it)
+    }
 }
 
 kotlin {
