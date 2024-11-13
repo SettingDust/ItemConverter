@@ -10,7 +10,7 @@ data class SimpleItemPredicate(
     private val nbt = predicate.tag?.let { NbtPredicate(it) }
 
     override fun test(item: ItemStack): Boolean {
-        if (item.`is`(predicate.item)) return false
+        if (!item.`is`(predicate.item)) return false
         if (nbt?.matches(item) == false) return false
         return true
     }

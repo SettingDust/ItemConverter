@@ -116,6 +116,7 @@ data class ItemConvertScreen(
                                 player.inventory.add(stack)
                             }
                         }
+                        if (getFrom().isEmpty) onClose()
                         val slotIndex = player.inventory.findSlotMatchingItem(stack)
                         if (slotIndex != -1) {
                             player.level.playSound(

@@ -99,6 +99,7 @@ data class C2SConvertItemPacket(val slot: Int, val target: ItemStack, val mode: 
                         }
                     }
                 }
+                if (slot.item.isEmpty) player.closeContainer()
             }
         }
     }
