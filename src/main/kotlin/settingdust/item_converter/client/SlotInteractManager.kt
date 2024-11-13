@@ -75,9 +75,9 @@ object SlotInteractManager {
         }
 
         val progress = SlotInteractProgress()
-        FORGE_BUS.addListener { event: RenderGuiEvent.Post ->
-            val minecraft = Minecraft.getInstance()
-            val screen = minecraft.screen
+
+        FORGE_BUS.addListener { event: ScreenEvent.Render.Post ->
+            val screen = event.screen
             if (pressedTicks <= PRESS_TICKS) {
                 if (screen is AbstractContainerScreen<*>) {
                     if (screen.slotUnderMouse != null && screen.menu.carried.isEmpty) {
@@ -89,7 +89,13 @@ object SlotInteractManager {
                         pressedTicks = 0
                     }
                 }
-            } else {
+            }
+        }
+
+        FORGE_BUS.addListener { event: RenderGuiEvent.Post ->
+            val minecraft = Minecraft.getInstance()
+            val screen = minecraft.screen
+            if (pressedTicks > PRESS_TICKS) {
                 if (!converting) {
                     if (screen is AbstractContainerScreen<*>) {
                         minecraft.pushGuiLayer(
@@ -147,6 +153,7 @@ data class SlotInteractProgress(
     ) {
         if (gui.minecraft.options.hideGui) return
         if (GuiOverlayManager.findOverlay(ResourceLocation("minecraft:hotbar")) == null) return
+        if (gui.minecraft.screen != null) return
         val inventory = gui.minecraft.player!!.inventory
         x = screenWidth / 2 - 91 + inventory.selected * 20 + 3
         y = screenHeight - 22 + 3
