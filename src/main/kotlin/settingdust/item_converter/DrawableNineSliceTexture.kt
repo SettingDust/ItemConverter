@@ -37,10 +37,10 @@ class DrawableNineSliceTexture(
         RenderSystem.setShader { GameRenderer.getPositionTexShader() }
         RenderSystem.setShaderTexture(0, location)
 
-        val uLeft = sliceLeft.toFloat()
-        val uRight = sliceRight.toFloat()
-        val vTop = sliceTop.toFloat()
-        val vBottom = sliceBottom.toFloat()
+        val uLeft = sliceLeft.toFloat() / textureWidth
+        val uRight = u1 - sliceRight.toFloat() / textureWidth
+        val vTop = sliceTop.toFloat() / textureHeight
+        val vBottom = v1 - sliceBottom.toFloat() / textureHeight
 
         val tessellator = Tesselator.getInstance()
         val bufferBuilder = tessellator.builder
@@ -89,8 +89,8 @@ class DrawableNineSliceTexture(
             sliceBottom
         )
 
-        val middleWidth = textureWidth - sliceLeft - sliceRight
-        val middleHeight = textureWidth - sliceTop - sliceBottom
+        val middleWidth = ((u1 - u0) * textureWidth - sliceLeft - sliceRight).toInt()
+        val middleHeight = ((v1 - v0) * textureHeight - sliceTop - sliceBottom).toInt()
         val tiledMiddleWidth = width - sliceLeft - sliceRight
         val tiledMiddleHeight = height - sliceTop - sliceBottom
         if (tiledMiddleWidth > 0) {
