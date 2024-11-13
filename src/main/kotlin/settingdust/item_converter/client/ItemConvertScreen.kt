@@ -75,6 +75,8 @@ data class ItemConvertScreen(
                 return@mapNotNull Triple(to, path, ratio)
             }.toList()
 
+        if (targets.isEmpty()) onClose()
+
         slotInRow = if (targets.size > 30) 11 else 5
         slotInColumn = targets.size / slotInRow + 1
         x = (width - SLOT_SIZE * slotInRow) / 2 + BORDER

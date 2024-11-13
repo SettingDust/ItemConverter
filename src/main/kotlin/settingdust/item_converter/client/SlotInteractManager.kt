@@ -54,18 +54,34 @@ object SlotInteractManager {
 
         val progress = SlotInteractProgress()
         FORGE_BUS.register { event: RenderGuiEvent.Post ->
+            val minecraft = Minecraft.getInstance()
+            val screen = minecraft.screen
             if (pressedTicks <= PRESS_TICKS) {
-                val minecraft = Minecraft.getInstance()
-                val screen = minecraft.screen
-                if (screen is AbstractContainerScreen<*> && screen.slotUnderMouse != null) {
-                    val hoveredSlot = screen.slotUnderMouse!!
-                    progress.x = screen.guiLeft + hoveredSlot.x
-                    progress.y = screen.guiTop + hoveredSlot.y
-                    progress.render(event.poseStack)
+                if (screen is AbstractContainerScreen<*>) {
+                    if (screen.slotUnderMouse != null && screen.menu.carried.isEmpty) {
+                        val hoveredSlot = screen.slotUnderMouse!!
+                        progress.x = screen.guiLeft + hoveredSlot.x
+                        progress.y = screen.guiTop + hoveredSlot.y
+                        progress.render(event.poseStack)
+                    } else {
+                        pressedTicks = 0
+                    }
                 }
             } else {
-                converting = true
-
+                if (screen is AbstractContainerScreen<*> && screen.slotUnderMouse != null && screen.menu.carried.isEmpty) {
+                    if (!converting) {
+                        minecraft.pushGuiLayer(
+                            ItemConvertScreen(
+                                screen,
+                                screen.slotUnderMouse,
+                                screen.slotUnderMouse!!.index
+                            )
+                        )
+                    }
+                    converting = true
+                } else if (screen == null) {
+                    minecraft.pushGuiLayer(ItemConvertScreen(screen, null, minecraft.player!!.inventory.selected))
+                }
             }
         }
     }
