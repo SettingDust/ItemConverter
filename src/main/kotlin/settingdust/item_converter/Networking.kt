@@ -63,15 +63,15 @@ data class C2SConvertItemPacket(val slot: Int, val target: ItemStack, val mode: 
             }
             val to = ConvertRules.graph.vertexSet().firstOrNull { it == SimpleItemPredicate(packet.target) }
             if (to == null) {
-                ItemConverter.LOGGER.error("${player.displayName} trying to convert ${fromItem.displayName} to target not in graph ${packet.target}")
+                ItemConverter.LOGGER.error("${player.displayName.string} trying to convert ${fromItem.displayName.string} to target not in graph ${packet.target}")
                 return
             }
             val path = DijkstraShortestPath.findPathBetween(ConvertRules.graph, from, to)
             if (path == null) {
-                ItemConverter.LOGGER.error("${player.displayName} trying to convert ${fromItem.displayName} to unreachable target ${packet.target}")
+                ItemConverter.LOGGER.error("${player.displayName.string} trying to convert ${fromItem.displayName.string} to unreachable target ${packet.target}")
                 return
             }
-            val ratio = path.edgeList.fold(Fraction.ONE) { acc, (fraction) -> fraction.multiplyBy(acc) }
+            val ratio = path.edgeList.fold(Fraction.ONE) { acc, edge -> edge.fraction.multiplyBy(acc) }
             context.get().enqueueWork {
                 when (packet.mode) {
                     Mode.ONE -> {

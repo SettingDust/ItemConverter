@@ -80,10 +80,14 @@ object SlotInteractManager {
             val screen = minecraft.screen
             if (pressedTicks <= PRESS_TICKS) {
                 if (screen is AbstractContainerScreen<*>) {
-                    val hoveredSlot = screen.slotUnderMouse!!
-                    progress.x = screen.guiLeft + hoveredSlot.x
-                    progress.y = screen.guiTop + hoveredSlot.y
-                    progress.render(event.poseStack)
+                    if (screen.slotUnderMouse != null && screen.menu.carried.isEmpty) {
+                        val hoveredSlot = screen.slotUnderMouse!!
+                        progress.x = screen.guiLeft + hoveredSlot.x
+                        progress.y = screen.guiTop + hoveredSlot.y
+                        progress.render(event.poseStack)
+                    } else {
+                        pressedTicks = 0
+                    }
                 }
             } else {
                 if (!converting) {
@@ -97,10 +101,7 @@ object SlotInteractManager {
                         )
                         converting = true
                     } else if (screen == null) {
-                        val inventory = minecraft.player!!.inventory
-                        val selected = inventory.selected
-                        if (inventory.getItem(selected).isEmpty) return@addListener
-                        minecraft.pushGuiLayer(ItemConvertScreen(screen, null, selected))
+                        minecraft.setScreen(ItemConvertScreen(screen, null, minecraft.player!!.inventory.selected))
                         converting = true
                         pressedTicks = 0
                     }

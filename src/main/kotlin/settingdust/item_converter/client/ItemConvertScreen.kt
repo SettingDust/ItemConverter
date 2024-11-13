@@ -6,17 +6,17 @@ import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.Button.OnPress
 import net.minecraft.client.gui.components.Button.OnTooltip
 import net.minecraft.client.gui.screens.Screen
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen
 import net.minecraft.network.chat.Component
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.inventory.Slot
 import net.minecraft.world.item.ItemStack
+import net.minecraftforge.client.event.ScreenEvent
+import net.minecraftforge.common.MinecraftForge
 import org.apache.commons.lang3.math.Fraction
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath
 import org.jgrapht.traverse.BreadthFirstIterator
-import org.lwjgl.glfw.GLFW
 import settingdust.item_converter.C2SConvertItemPacket
 import settingdust.item_converter.C2SConvertItemPacket.Mode
 import settingdust.item_converter.ConvertRules
@@ -55,8 +55,6 @@ data class ItemConvertScreen(
         )
     }
 
-    private val isContainer = parent is AbstractContainerScreen<*>
-
     private var x = 0
     private var y = 0
     private var slotInRow = 5
@@ -67,14 +65,15 @@ data class ItemConvertScreen(
     override fun init() {
         val input = getFrom()
         val from = SimpleItemPredicate(getFrom())
-        if (ConvertRules.graph.vertexSet().isEmpty() || getFrom().isEmpty) {
+        if (ConvertRules.graph.vertexSet().isEmpty() || getFrom().isEmpty || from !in ConvertRules.graph.vertexSet()) {
             onClose()
             return
         }
         val targets =
             BreadthFirstIterator(ConvertRules.graph, from).asSequence().mapNotNull { to ->
                 val path = DijkstraShortestPath.findPathBetween(ConvertRules.graph, from, to) ?: return@mapNotNull null
-                val ratio = path.edgeList.fold(Fraction.ONE) { acc, (fraction) -> fraction.multiplyBy(acc) }
+                if (path.vertexList.size == 1) return@mapNotNull null
+                val ratio = path.edgeList.fold(Fraction.ONE) { acc, edge -> edge.fraction.multiplyBy(acc) }
                 if (ratio.denominator > input.count) return@mapNotNull null
                 return@mapNotNull Triple(to, path, ratio)
             }.toList()
@@ -144,7 +143,7 @@ data class ItemConvertScreen(
                         if (Minecraft.getInstance().options.advancedItemTooltips) {
                             add(Component.literal("Path:"))
                             path.edgeList.dropLast(1).fold(Component.empty()) { acc, edge ->
-                                val (fraction) = edge
+                                val fraction = edge.fraction
                                 val sourceVertex = ConvertRules.graph.getEdgeSource(edge)
                                 acc.append(sourceVertex.predicate.displayName)
                                     .append(" x${fraction.numerator}\n>${fraction.denominator}x ")
@@ -156,21 +155,27 @@ data class ItemConvertScreen(
             )
             addRenderableWidget(button)
         }
+    }
 
-        if (!isContainer) {
-            GLFW.glfwSetCursorPos(minecraft!!.window.window, x.toDouble(), y.toDouble())
-        }
+    override fun render(poseStack: PoseStack, mouseX: Int, mouseY: Int, partialTick: Float) {
+        if (!SlotInteractManager.converting) onClose()
+        renderBackground(poseStack)
+        super.render(poseStack, mouseX, mouseY, partialTick)
     }
 
     override fun renderBackground(poseStack: PoseStack) {
         texture.draw(poseStack, x, y, width, height)
-        if (!SlotInteractManager.converting) onClose()
+        MinecraftForge.EVENT_BUS.post(ScreenEvent.BackgroundRendered(this, poseStack));
     }
 
     override fun onClose() {
         super.onClose()
         SlotInteractManager.pressedTicks = 0
         SlotInteractManager.converting = false
+    }
+
+    override fun isPauseScreen(): Boolean {
+        return false
     }
 }
 
