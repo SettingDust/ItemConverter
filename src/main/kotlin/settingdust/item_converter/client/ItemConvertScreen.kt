@@ -67,6 +67,10 @@ data class ItemConvertScreen(
     override fun init() {
         val input = getFrom()
         val from = SimpleItemPredicate(getFrom())
+        if (ConvertRules.graph.vertexSet().isEmpty() || getFrom().isEmpty) {
+            onClose()
+            return
+        }
         val targets =
             BreadthFirstIterator(ConvertRules.graph, from).asSequence().mapNotNull { to ->
                 val path = DijkstraShortestPath.findPathBetween(ConvertRules.graph, from, to) ?: return@mapNotNull null
@@ -160,6 +164,13 @@ data class ItemConvertScreen(
 
     override fun renderBackground(poseStack: PoseStack) {
         texture.draw(poseStack, x, y, width, height)
+        if (!SlotInteractManager.converting) onClose()
+    }
+
+    override fun onClose() {
+        super.onClose()
+        SlotInteractManager.pressedTicks = 0
+        SlotInteractManager.converting = false
     }
 }
 

@@ -35,8 +35,6 @@ object RuleGeneratorTypes {
 
 object RuleGenerators {
     val KEY = ResourceKey.createRegistryKey<RuleGenerator>(ItemConverter.id("rule_generator"))
-    lateinit var REGISTRY: Supplier<IForgeRegistry<RuleGenerator>>
-        internal set
 
     fun key(name: ResourceLocation) = ResourceKey.create(KEY, name)
 }

@@ -8,6 +8,7 @@ import net.minecraft.client.gui.GuiComponent
 import net.minecraft.client.gui.components.Widget
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.resources.ResourceLocation
+import net.minecraftforge.client.event.InputEvent
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent
 import net.minecraftforge.client.event.RenderGuiEvent
@@ -16,8 +17,8 @@ import net.minecraftforge.client.gui.overlay.ForgeGui
 import net.minecraftforge.client.gui.overlay.GuiOverlayManager
 import net.minecraftforge.client.gui.overlay.IGuiOverlay
 import net.minecraftforge.event.TickEvent
-import settingdust.item_converter.ItemConverter
 import thedarkcolour.kotlinforforge.forge.FORGE_BUS
+import thedarkcolour.kotlinforforge.forge.MOD_BUS
 
 object SlotInteractManager {
     const val PRESS_TICKS = 20
@@ -26,34 +27,47 @@ object SlotInteractManager {
     val KEY = KeyMapping("key.item_converter.slot_interact", InputConstants.KEY_LALT, "key.categories.inventory")
 
     init {
-        FORGE_BUS.register { event: RegisterKeyMappingsEvent ->
+        MOD_BUS.addListener { event: RegisterKeyMappingsEvent ->
             event.register(KEY)
         }
-        FORGE_BUS.register { event: ScreenEvent.KeyPressed.Pre ->
-            pressedTicks = 0
-            KEY.isDown = true
+        FORGE_BUS.addListener { event: InputEvent.Key ->
+            if (event.key == KEY.key.value) {
+                when (event.action) {
+                    InputConstants.PRESS -> {
+                        KEY.isDown = true
+                        pressedTicks = 0
+                    }
+
+                    InputConstants.RELEASE -> {
+                        KEY.isDown = false
+                        pressedTicks = 0
+                        converting = false
+                    }
+                }
+            }
         }
-        FORGE_BUS.register { event: ScreenEvent.KeyReleased.Pre ->
-            pressedTicks = 0
-            KEY.isDown = false
-            converting = false
-        }
-        FORGE_BUS.register { event: TickEvent.ClientTickEvent ->
-            if (event.phase != TickEvent.Phase.END) return@register
+
+        FORGE_BUS.addListener { event: TickEvent.ClientTickEvent ->
+            if (event.phase != TickEvent.Phase.END) return@addListener
             if (KEY.isDown) {
                 pressedTicks++
             }
         }
-        FORGE_BUS.register { event: ScreenEvent.Opening ->
+
+        FORGE_BUS.addListener { event: ScreenEvent.Opening ->
             pressedTicks = 0
         }
 
-        FORGE_BUS.register { event: RegisterGuiOverlaysEvent ->
-            event.registerAboveAll("${ItemConverter.ID}:slot_interact_progress", SlotInteractProgress())
+        FORGE_BUS.addListener { event: ScreenEvent.Closing ->
+            pressedTicks = 0
+        }
+
+        MOD_BUS.addListener { event: RegisterGuiOverlaysEvent ->
+            event.registerAboveAll("slot_interact_progress", SlotInteractProgress())
         }
 
         val progress = SlotInteractProgress()
-        FORGE_BUS.register { event: RenderGuiEvent.Post ->
+        FORGE_BUS.addListener { event: RenderGuiEvent.Post ->
             val minecraft = Minecraft.getInstance()
             val screen = minecraft.screen
             if (pressedTicks <= PRESS_TICKS) {
@@ -68,8 +82,8 @@ object SlotInteractManager {
                     }
                 }
             } else {
-                if (screen is AbstractContainerScreen<*> && screen.slotUnderMouse != null && screen.menu.carried.isEmpty) {
-                    if (!converting) {
+                if (!converting) {
+                    if (screen is AbstractContainerScreen<*> && screen.slotUnderMouse != null && screen.menu.carried.isEmpty) {
                         minecraft.pushGuiLayer(
                             ItemConvertScreen(
                                 screen,
@@ -77,10 +91,12 @@ object SlotInteractManager {
                                 screen.slotUnderMouse!!.index
                             )
                         )
+                        converting = true
+                    } else if (screen == null) {
+                        minecraft.pushGuiLayer(ItemConvertScreen(screen, null, minecraft.player!!.inventory.selected))
+                        converting = true
+                        pressedTicks = 0
                     }
-                    converting = true
-                } else if (screen == null) {
-                    minecraft.pushGuiLayer(ItemConvertScreen(screen, null, minecraft.player!!.inventory.selected))
                 }
             }
         }
@@ -99,8 +115,9 @@ data class SlotInteractProgress(
 
     fun render(poseStack: PoseStack) {
         if (SlotInteractManager.converting) return
-        val progress = (SlotInteractManager.pressedTicks / SlotInteractManager.PRESS_TICKS.toFloat())
-        val width = (WIDTH * progress).toInt().coerceIn(0, 1)
+        val progress =
+            (SlotInteractManager.pressedTicks / SlotInteractManager.PRESS_TICKS.toFloat()).coerceIn(0f, 1f)
+        val width = (WIDTH * progress).toInt()
         if (width > 0) {
             fill(poseStack, x, y, x + width, y + HEIGHT, COLOR)
         }
@@ -122,8 +139,8 @@ data class SlotInteractProgress(
     ) {
         if (gui.minecraft.options.hideGui) return
         if (GuiOverlayManager.findOverlay(ResourceLocation("minecraft:hotbar")) == null) return
-        x = screenWidth / 2 - 91 + gui.minecraft.player!!.inventory.selected * 20
-        y = screenHeight - 22
+        x = screenWidth / 2 - 91 + gui.minecraft.player!!.inventory.selected * 20 + 3
+        y = screenHeight - 22 + 3
         render(poseStack)
     }
 }

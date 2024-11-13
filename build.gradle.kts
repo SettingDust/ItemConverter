@@ -70,6 +70,7 @@ unimined.minecraft {
 
 val modImplementation by configurations
 val include by configurations
+val minecraftLibraries by configurations
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
@@ -80,8 +81,11 @@ dependencies {
     implementation(catalog.kotlin.forge)
 
     catalog.jgrapht.let {
+        minecraftLibraries(it)
         implementation(it)
         include(it)
+        minecraftLibraries("org.apfloat:apfloat:1.10.1")
+        minecraftLibraries("org.jheaps:jheaps:0.14")
     }
 }
 

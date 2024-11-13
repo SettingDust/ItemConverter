@@ -4,20 +4,29 @@ import com.google.gson.GsonBuilder
 import com.mojang.serialization.JsonOps
 import net.minecraft.commands.Commands
 import net.minecraft.commands.arguments.ResourceKeyArgument
+import net.minecraft.core.RegistryAccess
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
+import net.minecraftforge.api.distmarker.Dist
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent
 import net.minecraftforge.event.RegisterCommandsEvent
+import net.minecraftforge.event.server.ServerStartingEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.common.Mod
+import net.minecraftforge.fml.loading.FMLEnvironment
 import net.minecraftforge.fml.loading.FMLPaths
+import org.apache.commons.lang3.math.Fraction
 import org.apache.logging.log4j.LogManager
+import org.jgrapht.graph.SimpleDirectedWeightedGraph
+import settingdust.item_converter.client.SlotInteractManager
 import thedarkcolour.kotlinforforge.forge.FORGE_BUS
 import thedarkcolour.kotlinforforge.forge.MOD_BUS
 import kotlin.io.path.createDirectories
 import kotlin.io.path.div
 import kotlin.io.path.writeText
 import kotlin.jvm.optionals.getOrNull
+import kotlin.streams.asSequence
 
 @Mod(ItemConverter.ID)
 object ItemConverter {
@@ -30,6 +39,11 @@ object ItemConverter {
         MOD_BUS.register(ModEventHandler)
         FORGE_BUS.register(this)
         Networking
+        if (FMLEnvironment.dist == Dist.CLIENT) clientInit()
+    }
+
+    fun clientInit() {
+        SlotInteractManager
     }
 
     fun id(path: String) = ResourceLocation(ID, path)
@@ -70,5 +84,42 @@ object ItemConverter {
                 })
             })
         })
+    }
+
+    @SubscribeEvent
+    fun onServerStarting(event: ServerStartingEvent) {
+        refreshGraph(event.server.registryAccess())
+    }
+
+    @SubscribeEvent
+    fun onClientPlayerNetwork(event: ClientPlayerNetworkEvent.LoggingIn) {
+        refreshGraph(event.player.level.registryAccess())
+    }
+
+
+    private fun refreshGraph(registryAccess: RegistryAccess) {
+        ConvertRules.graph = SimpleDirectedWeightedGraph<SimpleItemPredicate, FractionUnweightedEdge>(null) {
+            FractionUnweightedEdge(Fraction.ZERO)
+        }
+        for (rule in registryAccess.registryOrThrow(ConvertRules.KEY).holders().asSequence().map { it.value() }) {
+            val input = rule.input
+            val inputPredicate = SimpleItemPredicate(input.copy().also { it.count = 1 })
+            ConvertRules.graph.addVertex(inputPredicate)
+            for (output in rule.output) {
+                val outputPredicate = SimpleItemPredicate(output.copy().also { it.count = 1 })
+                val fraction = Fraction.getReducedFraction(output.count, input.count)
+                ConvertRules.graph.addVertex(outputPredicate)
+                ConvertRules.graph.addEdge(
+                    inputPredicate,
+                    outputPredicate,
+                    FractionUnweightedEdge(fraction)
+                )
+                ConvertRules.graph.addEdge(
+                    outputPredicate,
+                    inputPredicate,
+                    FractionUnweightedEdge(fraction.invert())
+                )
+            }
+        }
     }
 }
