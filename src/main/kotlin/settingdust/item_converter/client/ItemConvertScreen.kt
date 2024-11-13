@@ -33,7 +33,7 @@ data class ItemConvertScreen(
         private const val TEXTURE_WIDTH = 128
         private const val TEXTURE_HEIGHT = 128
 
-        private const val WIDTH = 108
+        private const val WIDTH = 102
         private const val HEIGHT = 30
 
         private const val BORDER = 6
@@ -82,10 +82,13 @@ data class ItemConvertScreen(
 
         slotInRow = if (targets.size > 30) 11 else 5
         slotInColumn = targets.size / slotInRow + 1
-        x = (width - SLOT_SIZE * slotInRow) / 2 + BORDER
-        y = (height - SLOT_SIZE * slotInColumn) / 2 + BORDER
-        width = SLOT_SIZE * slotInRow + BORDER * 2
-        height = SLOT_SIZE * slotInColumn + BORDER * 2
+        val width = SLOT_SIZE * slotInRow + BORDER * 2
+        val height = SLOT_SIZE * slotInColumn + BORDER * 2
+
+        x = (this.width - width) / 2
+        y = (this.height - height) / 2
+        this.width = width
+        this.height = height
 
         for ((index, pair) in targets.withIndex()) {
             val (to, path, ratio) = pair
