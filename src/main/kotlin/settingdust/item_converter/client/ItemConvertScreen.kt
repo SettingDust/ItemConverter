@@ -92,8 +92,8 @@ data class ItemConvertScreen(
 
         for ((index, pair) in targets.withIndex()) {
             val (to, path, ratio) = pair
-            val x = x + SLOT_SIZE * (index % slotInRow)
-            val y = y + SLOT_SIZE * (index / slotInRow)
+            val x = x + BORDER + SLOT_SIZE * (index % slotInRow)
+            val y = y + BORDER + SLOT_SIZE * (index / slotInRow)
             val button = ItemButton(
                 to.predicate.copy().apply { count = ratio.numerator }, x, y, SLOT_SIZE, SLOT_SIZE,
                 OnPress {
@@ -141,17 +141,29 @@ data class ItemConvertScreen(
                 OnTooltip { button, pose, mouseX, mouseY ->
                     val button = button as ItemButton
                     renderTooltip(pose, buildList {
-                        add(Component.literal("${ratio.numerator}:${ratio.denominator}"))
+                        add(Component.literal("${ratio.denominator}:${ratio.numerator}"))
                         addAll(getTooltipFromItem(button.item))
                         if (Minecraft.getInstance().options.advancedItemTooltips) {
                             add(Component.literal("Path:"))
-                            path.edgeList.dropLast(1).fold(Component.empty()) { acc, edge ->
+                            if (path.edgeList.isNotEmpty()) {
+                                val edge = path.edgeList[0]
                                 val fraction = edge.fraction
                                 val sourceVertex = ConvertRules.graph.getEdgeSource(edge)
-                                acc.append(sourceVertex.predicate.displayName)
-                                    .append(" x${fraction.numerator}\n>${fraction.denominator}x ")
+                                add(sourceVertex.predicate.displayName.copy().append(" x${fraction.denominator}"))
                             }
-                            add(path.vertexList.last().predicate.displayName)
+                            for (edges in path.edgeList.windowed(2, partialWindows = true)) {
+                                val firstEdge = edges[0]
+                                val firstFraction = firstEdge.fraction
+                                val targetVertex = ConvertRules.graph.getEdgeTarget(firstEdge)
+                                val secondComponent = Component.literal(">${firstFraction.numerator}x ")
+                                    .append(targetVertex.predicate.displayName)
+                                if (edges.size == 2) {
+                                    val secondEdge = edges[1]
+                                    val secondFraction = secondEdge.fraction
+                                    secondComponent.append(" x${secondFraction.denominator}")
+                                }
+                                add(secondComponent)
+                            }
                         }
                     }, button.item.tooltipImage, mouseX, mouseY)
                 }
@@ -194,8 +206,10 @@ open class ItemButton(
     Button(x, y, width, height, Component.empty(), onPress, onTooltip) {
     override fun renderButton(pose: PoseStack, mouseX: Int, mouseY: Int, partialTick: Float) {
         val minecraft = Minecraft.getInstance()
-        minecraft.itemRenderer.renderAndDecorateItem(minecraft.player!!, item, x, y, 0)
-        if (isHoveredOrFocused)
-            fill(pose, x, y, x + width, y + height, (0x888888 or ((alpha * 0xFF).toInt() shl 24)).toInt())
+        minecraft.itemRenderer.renderAndDecorateItem(minecraft.player!!, item, x + 1, y + 1, 0)
+        if (isHoveredOrFocused) {
+            fill(pose, x + 1, y + 1, x + width - 1, y + height - 1, 0x80FFFFFF.toInt())
+            this.renderToolTip(pose, mouseX, mouseY);
+        }
     }
 }
