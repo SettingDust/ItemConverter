@@ -49,7 +49,15 @@ object SlotInteractManager {
 
         FORGE_BUS.addListener { event: TickEvent.ClientTickEvent ->
             if (event.phase != TickEvent.Phase.END) return@addListener
-            if (KEY.isDown) {
+            val minecraft = Minecraft.getInstance()
+            val screen by lazy { minecraft.screen }
+            val inventory by lazy { minecraft.player!!.inventory }
+            if (KEY.isDown &&
+                ((screen is AbstractContainerScreen<*>
+                        && (screen as AbstractContainerScreen<*>).slotUnderMouse != null
+                        && (screen as AbstractContainerScreen<*>).menu.carried.isEmpty)
+                        || (!inventory.getItem(inventory.selected).isEmpty && screen == null))
+            ) {
                 pressedTicks++
             }
         }
@@ -72,18 +80,14 @@ object SlotInteractManager {
             val screen = minecraft.screen
             if (pressedTicks <= PRESS_TICKS) {
                 if (screen is AbstractContainerScreen<*>) {
-                    if (screen.slotUnderMouse != null && screen.menu.carried.isEmpty) {
-                        val hoveredSlot = screen.slotUnderMouse!!
-                        progress.x = screen.guiLeft + hoveredSlot.x
-                        progress.y = screen.guiTop + hoveredSlot.y
-                        progress.render(event.poseStack)
-                    } else {
-                        pressedTicks = 0
-                    }
+                    val hoveredSlot = screen.slotUnderMouse!!
+                    progress.x = screen.guiLeft + hoveredSlot.x
+                    progress.y = screen.guiTop + hoveredSlot.y
+                    progress.render(event.poseStack)
                 }
             } else {
                 if (!converting) {
-                    if (screen is AbstractContainerScreen<*> && screen.slotUnderMouse != null && screen.menu.carried.isEmpty) {
+                    if (screen is AbstractContainerScreen<*>) {
                         minecraft.pushGuiLayer(
                             ItemConvertScreen(
                                 screen,
@@ -93,7 +97,10 @@ object SlotInteractManager {
                         )
                         converting = true
                     } else if (screen == null) {
-                        minecraft.pushGuiLayer(ItemConvertScreen(screen, null, minecraft.player!!.inventory.selected))
+                        val inventory = minecraft.player!!.inventory
+                        val selected = inventory.selected
+                        if (inventory.getItem(selected).isEmpty) return@addListener
+                        minecraft.pushGuiLayer(ItemConvertScreen(screen, null, selected))
                         converting = true
                         pressedTicks = 0
                     }
@@ -139,7 +146,8 @@ data class SlotInteractProgress(
     ) {
         if (gui.minecraft.options.hideGui) return
         if (GuiOverlayManager.findOverlay(ResourceLocation("minecraft:hotbar")) == null) return
-        x = screenWidth / 2 - 91 + gui.minecraft.player!!.inventory.selected * 20 + 3
+        val inventory = gui.minecraft.player!!.inventory
+        x = screenWidth / 2 - 91 + inventory.selected * 20 + 3
         y = screenHeight - 22 + 3
         render(poseStack)
     }
