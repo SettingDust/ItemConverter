@@ -206,10 +206,12 @@ open class ItemButton(
     Button(x, y, width, height, Component.empty(), onPress, onTooltip) {
     override fun renderButton(pose: PoseStack, mouseX: Int, mouseY: Int, partialTick: Float) {
         val minecraft = Minecraft.getInstance()
+        minecraft.itemRenderer.blitOffset = 2000f
         minecraft.itemRenderer.renderAndDecorateItem(minecraft.player!!, item, x + 1, y + 1, 0)
         if (isHoveredOrFocused) {
             fill(pose, x + 1, y + 1, x + width - 1, y + height - 1, 0x80FFFFFF.toInt())
             this.renderToolTip(pose, mouseX, mouseY);
         }
+        minecraft.itemRenderer.blitOffset = 0f
     }
 }
