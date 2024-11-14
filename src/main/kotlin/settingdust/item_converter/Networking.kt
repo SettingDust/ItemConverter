@@ -23,7 +23,7 @@ object Networking {
             C2SConvertItemPacket::class.java,
             { message, buf -> buf.writeWithCodec(C2SConvertItemPacket.CODEC, message) },
             { it.readWithCodec(C2SConvertItemPacket.CODEC) },
-            C2SConvertItemPacket::handle
+            { packet, context -> C2SConvertItemPacket.handle(packet, context) }
         )
     }
 }
@@ -38,20 +38,20 @@ data class C2SConvertItemPacket(val slot: Int, val target: ItemStack, val mode: 
             ).apply(instance, ::C2SConvertItemPacket)
         }
 
-        fun handle(packet: C2SConvertItemPacket, context: Supplier<NetworkEvent.Context>) {
+        fun handle(packet: C2SConvertItemPacket, context: Supplier<NetworkEvent.Context>) = runCatching {
             val player = context.get().sender
             if (player == null) {
                 ItemConverter.LOGGER.warn("Received C2SConvertItemPacket from null player.")
-                return
+                return@runCatching
             }
             val container = player.containerMenu
             if (container == null) {
                 ItemConverter.LOGGER.warn("Received C2SConvertItemPacket of null container from ${player.displayName}.")
-                return
+                return@runCatching
             }
             val slot = container.getSlot(packet.slot)
             val fromItem = slot.item
-            val from = ConvertRules.graph.vertexSet().first { it.test(fromItem) }
+            val from = ConvertRules.graph.vertexSet().firstOrNull { it.test(fromItem) }
             if (from == null) {
                 player.sendSystemMessage(
                     Component.translatable(
@@ -59,17 +59,17 @@ data class C2SConvertItemPacket(val slot: Int, val target: ItemStack, val mode: 
                         fromItem.displayName
                     )
                 )
-                return
+                return@runCatching
             }
             val to = ConvertRules.graph.vertexSet().firstOrNull { it == SimpleItemPredicate(packet.target) }
             if (to == null) {
                 ItemConverter.LOGGER.error("${player.displayName.string} trying to convert ${fromItem.displayName.string} to target not in graph ${packet.target}")
-                return
+                return@runCatching
             }
             val path = DijkstraShortestPath.findPathBetween(ConvertRules.graph, from, to)
             if (path == null) {
                 ItemConverter.LOGGER.error("${player.displayName.string} trying to convert ${fromItem.displayName.string} to unreachable target ${packet.target}")
-                return
+                return@runCatching
             }
             val ratio = path.edgeList.fold(Fraction.ONE) { acc, edge -> edge.fraction.multiplyBy(acc) }
             context.get().enqueueWork {
@@ -99,8 +99,9 @@ data class C2SConvertItemPacket(val slot: Int, val target: ItemStack, val mode: 
                         }
                     }
                 }
-                if (slot.item.isEmpty) player.closeContainer()
             }
+        }.onFailure {
+            ItemConverter.LOGGER.error("Error handling C2SConvertItemPacket", it)
         }
     }
 

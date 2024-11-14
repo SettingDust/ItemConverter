@@ -175,7 +175,7 @@ data class ItemConvertScreen(
     }
 
     override fun render(poseStack: PoseStack, mouseX: Int, mouseY: Int, partialTick: Float) {
-        if (!SlotInteractManager.converting) onClose()
+        if (!SlotInteractManager.converting || getFrom().isEmpty) onClose()
         renderBackground(poseStack)
         super.render(poseStack, mouseX, mouseY, partialTick)
     }
