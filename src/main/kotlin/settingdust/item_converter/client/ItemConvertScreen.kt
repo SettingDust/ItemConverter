@@ -27,7 +27,7 @@ import settingdust.item_converter.Networking
 import settingdust.item_converter.SimpleItemPredicate
 
 data class ItemConvertScreen(
-    val parent: Screen?, val slot: Slot?, val slotIndex: Int
+    val parent: Screen?, val slot: Slot
 ) : Screen(Component.translatable("gui.${ItemConverter.ID}.item_convert")) {
     companion object {
         private val TEXTURE = ItemConverter.id("textures/gui/window.png")
@@ -63,7 +63,7 @@ data class ItemConvertScreen(
     private var slotInRow = 5
     private var slotInColumn = 1
 
-    private fun getFrom() = slot?.item ?: Minecraft.getInstance().player!!.inventory.getItem(slotIndex)
+    private fun getFrom() = slot.item
 
     override fun init() {
         val input = getFrom()
@@ -133,7 +133,7 @@ data class ItemConvertScreen(
                     } else {
                         Networking.channel.sendToServer(
                             C2SConvertItemPacket(
-                                slotIndex,
+                                slot.index,
                                 stack,
                                 mode
                             )

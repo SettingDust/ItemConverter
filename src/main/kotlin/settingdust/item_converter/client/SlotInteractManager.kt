@@ -102,13 +102,18 @@ object SlotInteractManager {
                         minecraft.pushGuiLayer(
                             ItemConvertScreen(
                                 screen,
-                                screen.slotUnderMouse,
-                                screen.slotUnderMouse!!.index
+                                screen.slotUnderMouse!!
                             )
                         )
                         converting = true
                     } else if (screen == null) {
-                        minecraft.setScreen(ItemConvertScreen(screen, null, minecraft.player!!.inventory.selected))
+                        val slotIndex = 36 + minecraft.player!!.inventory.selected
+                        minecraft.setScreen(
+                            ItemConvertScreen(
+                                screen,
+                                Minecraft.getInstance().player!!.inventoryMenu.getSlot(slotIndex)
+                            )
+                        )
                         converting = true
                         pressedTicks = 0
                     }
