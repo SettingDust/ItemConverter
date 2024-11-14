@@ -80,8 +80,8 @@ object SlotInteractManager {
             val screen = event.screen
             if (pressedTicks <= PRESS_TICKS) {
                 if (screen is AbstractContainerScreen<*>) {
-                    if (screen.slotUnderMouse != null && screen.menu.carried.isEmpty) {
-                        val hoveredSlot = screen.slotUnderMouse!!
+                    val hoveredSlot = screen.slotUnderMouse
+                    if (hoveredSlot != null && screen.menu.carried.isEmpty && !hoveredSlot.item.isEmpty) {
                         progress.x = screen.guiLeft + hoveredSlot.x
                         progress.y = screen.guiTop + hoveredSlot.y
                         progress.render(event.poseStack)
