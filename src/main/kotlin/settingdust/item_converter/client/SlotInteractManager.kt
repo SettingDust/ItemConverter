@@ -50,6 +50,7 @@ object SlotInteractManager {
         FORGE_BUS.addListener { event: TickEvent.ClientTickEvent ->
             if (event.phase != TickEvent.Phase.END) return@addListener
             val minecraft = Minecraft.getInstance()
+            if (minecraft.player == null) return@addListener
             val screen by lazy { minecraft.screen }
             val inventory by lazy { minecraft.player!!.inventory }
             if (KEY.isDown &&
