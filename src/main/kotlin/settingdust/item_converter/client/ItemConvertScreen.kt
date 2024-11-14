@@ -12,6 +12,7 @@ import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.inventory.Slot
 import net.minecraft.world.item.ItemStack
+import net.minecraftforge.client.ForgeHooksClient
 import net.minecraftforge.client.event.ScreenEvent
 import net.minecraftforge.common.MinecraftForge
 import org.apache.commons.lang3.math.Fraction
@@ -67,7 +68,7 @@ data class ItemConvertScreen(
     override fun init() {
         val input = getFrom()
         val from = SimpleItemPredicate(getFrom())
-        if (ConvertRules.graph.vertexSet().isEmpty() || getFrom().isEmpty || from !in ConvertRules.graph.vertexSet()) {
+        if (ConvertRules.graph.vertexSet().isEmpty() || input.isEmpty || from !in ConvertRules.graph.vertexSet()) {
             onClose()
             return
         }
@@ -116,9 +117,9 @@ data class ItemConvertScreen(
                                 player.inventory.add(stack)
                             }
                         }
-                        if (getFrom().isEmpty) onClose()
-                        val slotIndex = player.inventory.findSlotMatchingItem(stack)
-                        if (slotIndex != -1) {
+
+                        for ((i, it) in player.inventoryMenu.slots.withIndex()) {
+                            if (!ItemStack.isSameItemSameTags(it.item, button.item)) continue
                             player.level.playSound(
                                 player,
                                 player.blockPosition(),
@@ -127,7 +128,7 @@ data class ItemConvertScreen(
                                 0.2F,
                                 (player.random.nextFloat() * 0.7F + 1.0F) * 2.0F
                             )
-                            minecraft!!.gameMode!!.handleCreativeModeItemAdd(stack, slotIndex)
+                            minecraft!!.gameMode!!.handleCreativeModeItemAdd(it.item, i)
                         }
                     } else {
                         Networking.channel.sendToServer(
@@ -205,9 +206,10 @@ open class ItemButton(
     onTooltip: OnTooltip
 ) :
     Button(x, y, width, height, Component.empty(), onPress, onTooltip) {
+    @Suppress("UnstableApiUsage")
     override fun renderButton(pose: PoseStack, mouseX: Int, mouseY: Int, partialTick: Float) {
         val minecraft = Minecraft.getInstance()
-        minecraft.itemRenderer.blitOffset = 2000f
+        minecraft.itemRenderer.blitOffset = ForgeHooksClient.getGuiFarPlane() - 3000
         minecraft.itemRenderer.renderAndDecorateItem(minecraft.player!!, item, x + 1, y + 1, 0)
         if (isHoveredOrFocused) {
             fill(pose, x + 1, y + 1, x + width - 1, y + height - 1, 0x80FFFFFF.toInt())
