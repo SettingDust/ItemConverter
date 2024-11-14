@@ -62,11 +62,11 @@ data class ItemConvertScreen(
     private var height = 0
     private var slotInRow = 5
     private var slotInColumn = 1
+    private val input = getFrom()
 
     private fun getFrom() = slot.item
 
     override fun init() {
-        val input = getFrom()
         val from = SimpleItemPredicate(getFrom())
         if (ConvertRules.graph.vertexSet().isEmpty() || input.isEmpty || from !in ConvertRules.graph.vertexSet()) {
             onClose()
