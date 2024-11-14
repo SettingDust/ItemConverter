@@ -55,11 +55,11 @@ unimined.minecraft {
     version(catalog.versions.minecraft.get())
 
     mappings {
-        intermediary()
+        searge()
         mojmap()
         parchment(mcVersion = "1.19.4", version = "2023.06.26")
 
-        devFallbackNamespace("official")
+        devFallbackNamespace("searge")
     }
 
     minecraftForge {
