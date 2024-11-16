@@ -18,13 +18,13 @@ import net.minecraftforge.common.MinecraftForge
 import org.apache.commons.lang3.math.Fraction
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath
 import org.jgrapht.traverse.BreadthFirstIterator
-import settingdust.item_converter.C2SConvertItemPacket
-import settingdust.item_converter.C2SConvertItemPacket.Mode
 import settingdust.item_converter.ConvertRules
 import settingdust.item_converter.DrawableNineSliceTexture
 import settingdust.item_converter.ItemConverter
-import settingdust.item_converter.Networking
 import settingdust.item_converter.SimpleItemPredicate
+import settingdust.item_converter.networking.C2SConvertItemPacket
+import settingdust.item_converter.networking.C2SConvertItemPacket.Mode
+import settingdust.item_converter.networking.Networking
 
 data class ItemConvertScreen(
     val parent: Screen?, val slot: Slot
@@ -98,23 +98,23 @@ data class ItemConvertScreen(
             val button = ItemButton(
                 to.predicate.copy().apply { count = ratio.numerator }, x, y, SLOT_SIZE, SLOT_SIZE,
                 OnPress {
-                    val mode = if (!hasShiftDown()) Mode.ONE else Mode.ALL
+                    val mode = if (!hasShiftDown()) Mode.SINGLE_CLICK else Mode.SHIFT_CLICK
                     val button = it as ItemButton
-                    val stack = button.item.copy()
+                    val target = button.item.copy()
                     if (parent is CreativeModeInventoryScreen) {
-                        stack.popTime = 5
+                        target.popTime = 5
                         val player = minecraft!!.player!!
                         when (mode) {
-                            Mode.ONE -> {
-                                stack.count = ratio.numerator
-                                player.inventory.add(stack)
+                            Mode.SINGLE_CLICK -> {
+                                target.count = ratio.numerator
+                                player.inventory.add(target)
                             }
 
-                            Mode.ALL -> {
+                            Mode.SHIFT_CLICK -> {
                                 val times = input.count / ratio.denominator
                                 val amount = ratio.denominator * times
-                                stack.count = amount
-                                player.inventory.add(stack)
+                                target.count = amount
+                                player.inventory.add(target)
                             }
                         }
 
@@ -134,7 +134,7 @@ data class ItemConvertScreen(
                         Networking.channel.sendToServer(
                             C2SConvertItemPacket(
                                 slot.index,
-                                stack,
+                                target,
                                 mode
                             )
                         )

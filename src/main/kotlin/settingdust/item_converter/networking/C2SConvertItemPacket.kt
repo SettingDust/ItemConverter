@@ -1,32 +1,20 @@
-package settingdust.item_converter
+package settingdust.item_converter.networking
 
 import com.mojang.serialization.Codec
 import com.mojang.serialization.codecs.RecordCodecBuilder
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import net.minecraft.network.chat.Component
 import net.minecraft.util.StringRepresentable
 import net.minecraft.world.item.ItemStack
 import net.minecraftforge.network.NetworkEvent
-import net.minecraftforge.network.NetworkRegistry
 import org.apache.commons.lang3.math.Fraction
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath
+import settingdust.item_converter.ConvertRules
+import settingdust.item_converter.ItemConverter
+import settingdust.item_converter.MoreCodecs
+import settingdust.item_converter.SimpleItemPredicate
 import java.util.function.Supplier
-
-object Networking {
-    private const val VERSION = "1"
-    val ID = ItemConverter.id("main")
-    val channel = NetworkRegistry.newSimpleChannel(ID, { VERSION }, VERSION::equals, VERSION::equals)
-
-    init {
-        @Suppress("DEPRECATION")
-        channel.registerMessage(
-            0,
-            C2SConvertItemPacket::class.java,
-            { message, buf -> buf.writeWithCodec(C2SConvertItemPacket.CODEC, message) },
-            { it.readWithCodec(C2SConvertItemPacket.CODEC) },
-            { packet, context -> C2SConvertItemPacket.handle(packet, context) }
-        )
-    }
-}
 
 data class C2SConvertItemPacket(val slot: Int, val target: ItemStack, val mode: Mode) {
     companion object {
@@ -61,39 +49,44 @@ data class C2SConvertItemPacket(val slot: Int, val target: ItemStack, val mode: 
                 )
                 return@runCatching
             }
-            val to = ConvertRules.graph.vertexSet().firstOrNull { it == SimpleItemPredicate(packet.target) }
+            val targetPredicate = SimpleItemPredicate(packet.target)
+            val to = ConvertRules.graph.vertexSet().firstOrNull { it == targetPredicate }
             if (to == null) {
-                ItemConverter.LOGGER.error("${player.displayName.string} trying to convert ${fromItem.displayName.string} to target not in graph ${packet.target}")
+                ItemConverter.LOGGER.error("${player.displayName.string} trying to convert ${fromItem.displayName.string} to target not in graph ${packet.target.displayName.string}")
                 return@runCatching
             }
             val path = DijkstraShortestPath.findPathBetween(ConvertRules.graph, from, to)
             if (path == null) {
-                ItemConverter.LOGGER.error("${player.displayName.string} trying to convert ${fromItem.displayName.string} to unreachable target ${packet.target}")
+                ItemConverter.LOGGER.error("${player.displayName.string} trying to convert ${fromItem.displayName.string} to unreachable target ${packet.target.displayName.string}")
                 return@runCatching
             }
             val ratio = path.edgeList.fold(Fraction.ONE) { acc, edge -> edge.fraction.multiplyBy(acc) }
-            context.get().enqueueWork {
-                when (packet.mode) {
-                    Mode.ONE -> {
-                        if (ratio.denominator > fromItem.count) {
-                            return@enqueueWork
-                        }
+            when (packet.mode) {
+                Mode.SINGLE_CLICK -> {
+                    if (ratio.denominator > fromItem.count) {
+                        return@runCatching
+                    }
+                    runBlocking(ItemConverter.serverCoroutineDispatcher!!) {
                         slot.safeTake(ratio.denominator, ratio.denominator, player)
-                        val itemToInsert = to.predicate.copy().also {
-                            it.count = ratio.numerator
-                        }
+                    }
+                    val itemToInsert = to.predicate.copy().also {
+                        it.count = ratio.numerator
+                    }
+                    ItemConverter.serverCoroutineScope!!.launch {
                         if (!player.inventory.add(itemToInsert)) {
                             player.drop(itemToInsert, true)
                         }
                     }
+                }
 
-                    Mode.ALL -> {
-                        val times = fromItem.count / ratio.denominator
-                        val amount = ratio.denominator * times
-                        slot.safeTake(amount, amount, player)
-                        val itemToInsert = to.predicate.copy().also {
-                            it.count = ratio.numerator * times
-                        }
+                Mode.SHIFT_CLICK -> {
+                    val times = fromItem.count / ratio.denominator
+                    val amount = ratio.denominator * times
+                    runBlocking(ItemConverter.serverCoroutineDispatcher!!) { slot.safeTake(amount, amount, player) }
+                    val itemToInsert = to.predicate.copy().also {
+                        it.count = ratio.numerator * times
+                    }
+                    ItemConverter.serverCoroutineScope!!.launch {
                         if (!player.inventory.add(itemToInsert)) {
                             player.drop(itemToInsert, true)
                         }
@@ -106,8 +99,8 @@ data class C2SConvertItemPacket(val slot: Int, val target: ItemStack, val mode: 
     }
 
     enum class Mode(private val serialName: String) : StringRepresentable {
-        ONE("one"),
-        ALL("all");
+        SINGLE_CLICK("single"),
+        SHIFT_CLICK("shift");
 
         override fun getSerializedName() = serialName
     }

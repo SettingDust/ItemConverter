@@ -2,6 +2,9 @@ package settingdust.item_converter
 
 import com.google.gson.GsonBuilder
 import com.mojang.serialization.JsonOps
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.asCoroutineDispatcher
 import net.minecraft.commands.Commands
 import net.minecraft.commands.arguments.ResourceKeyArgument
 import net.minecraft.core.RegistryAccess
@@ -12,6 +15,7 @@ import net.minecraftforge.api.distmarker.Dist
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent
 import net.minecraftforge.event.RegisterCommandsEvent
 import net.minecraftforge.event.server.ServerStartingEvent
+import net.minecraftforge.event.server.ServerStoppingEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.loading.FMLEnvironment
@@ -20,6 +24,7 @@ import org.apache.commons.lang3.math.Fraction
 import org.apache.logging.log4j.LogManager
 import org.jgrapht.graph.SimpleDirectedWeightedGraph
 import settingdust.item_converter.client.SlotInteractManager
+import settingdust.item_converter.networking.Networking
 import thedarkcolour.kotlinforforge.forge.FORGE_BUS
 import thedarkcolour.kotlinforforge.forge.MOD_BUS
 import kotlin.io.path.createDirectories
@@ -34,6 +39,8 @@ object ItemConverter {
     val LOGGER = LogManager.getLogger()
     val exportPath = FMLPaths.GAMEDIR.get() / ".item_converter_generated"
     val gson = GsonBuilder().setPrettyPrinting().create()
+    var serverCoroutineDispatcher: CoroutineDispatcher? = null
+    var serverCoroutineScope: CoroutineScope? = null
 
     init {
         MOD_BUS.register(ModEventHandler)
@@ -89,7 +96,16 @@ object ItemConverter {
     @SubscribeEvent
     fun onServerStarting(event: ServerStartingEvent) {
         refreshGraph(event.server.registryAccess())
+        serverCoroutineDispatcher = event.server.asCoroutineDispatcher()
+        serverCoroutineScope = CoroutineScope(serverCoroutineDispatcher!!)
     }
+
+    @SubscribeEvent
+    fun onServerStopping(event: ServerStoppingEvent) {
+        serverCoroutineDispatcher = null
+        serverCoroutineScope = null
+    }
+
 
     @SubscribeEvent
     fun onClientPlayerNetwork(event: ClientPlayerNetworkEvent.LoggingIn) {

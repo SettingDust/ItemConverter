@@ -17,6 +17,8 @@ import net.minecraftforge.client.gui.overlay.ForgeGui
 import net.minecraftforge.client.gui.overlay.GuiOverlayManager
 import net.minecraftforge.client.gui.overlay.IGuiOverlay
 import net.minecraftforge.event.TickEvent
+import settingdust.item_converter.networking.C2SConvertTargetPacket
+import settingdust.item_converter.networking.Networking
 import thedarkcolour.kotlinforforge.forge.FORGE_BUS
 import thedarkcolour.kotlinforforge.forge.MOD_BUS
 
@@ -24,22 +26,25 @@ object SlotInteractManager {
     const val PRESS_TICKS = 20
     var pressedTicks = 0
     var converting = false
-    val KEY = KeyMapping("key.item_converter.slot_interact", InputConstants.KEY_LALT, "key.categories.inventory")
+    val SLOT_INTERACT_KEY =
+        KeyMapping("key.item_converter.slot_interact", InputConstants.KEY_LALT, "key.categories.inventory")
+    val PICK_ITEM_KEY = Minecraft.getInstance().options.keyPickItem
 
     init {
         MOD_BUS.addListener { event: RegisterKeyMappingsEvent ->
-            event.register(KEY)
+            event.register(SLOT_INTERACT_KEY)
         }
+
         FORGE_BUS.addListener { event: InputEvent.Key ->
-            if (event.key == KEY.key.value) {
+            if (event.key == SLOT_INTERACT_KEY.key.value) {
                 when (event.action) {
                     InputConstants.PRESS -> {
-                        KEY.isDown = true
+                        SLOT_INTERACT_KEY.isDown = true
                         pressedTicks = 0
                     }
 
                     InputConstants.RELEASE -> {
-                        KEY.isDown = false
+                        SLOT_INTERACT_KEY.isDown = false
                         pressedTicks = 0
                         converting = false
                     }
@@ -53,7 +58,7 @@ object SlotInteractManager {
             if (minecraft.player == null) return@addListener
             val screen by lazy { minecraft.screen }
             val inventory by lazy { minecraft.player!!.inventory }
-            if (KEY.isDown &&
+            if (SLOT_INTERACT_KEY.isDown &&
                 ((screen is AbstractContainerScreen<*>
                         && (screen as AbstractContainerScreen<*>).slotUnderMouse != null
                         && (screen as AbstractContainerScreen<*>).menu.carried.isEmpty)
@@ -117,6 +122,19 @@ object SlotInteractManager {
                         converting = true
                         pressedTicks = 0
                     }
+                }
+            }
+        }
+
+        FORGE_BUS.addListener { event: InputEvent.InteractionKeyMappingTriggered ->
+            when {
+                event.isPickBlock -> {
+                    val minecraft = Minecraft.getInstance()
+                    val player = minecraft.player ?: return@addListener
+                    val sneaking = player.isCrouching
+                    if (player.abilities.instabuild && !sneaking) return@addListener
+                    event.isCanceled = true
+                    Networking.channel.sendToServer(C2SConvertTargetPacket)
                 }
             }
         }
