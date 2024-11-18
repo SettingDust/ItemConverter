@@ -35,3 +35,22 @@ data class ClientConfig(val pressTicks: Int = 20) {
         }
     }
 }
+
+@Serializable
+data class CommonConfig(val bidirectionalConversion: Boolean = false) {
+    companion object {
+        private val path = FMLPaths.CONFIGDIR.get() / "${ItemConverter.ID}.common.json"
+
+        var config = CommonConfig()
+
+        @OptIn(ExperimentalSerializationApi::class)
+        fun reload() {
+            runCatching {
+                path.createFile()
+                path.writeText("{}")
+            }
+            config = json.decodeFromStream(path.inputStream())
+            json.encodeToStream(config, path.outputStream())
+        }
+    }
+}
