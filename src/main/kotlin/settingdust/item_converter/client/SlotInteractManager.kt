@@ -27,7 +27,7 @@ object SlotInteractManager {
     var pressedTicks = 0
     var converting = false
     val SLOT_INTERACT_KEY =
-        KeyMapping("key.item_converter.slot_interact", InputConstants.KEY_LALT, "key.categories.inventory")
+        KeyMapping("key.item_converter.slot_interact", InputConstants.KEY_CAPSLOCK, "key.categories.inventory")
 
     init {
         MOD_BUS.addListener { event: RegisterKeyMappingsEvent ->
