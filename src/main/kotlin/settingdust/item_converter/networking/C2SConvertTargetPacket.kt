@@ -137,29 +137,31 @@ object C2SConvertTargetPacket {
     ) {
         val isInHand = ItemStack.isSameItemSameTags(itemToInsert, selected)
 
-        if (isInHand) {
-            removeMaterials()
-            if (!player.inventory.add(player.inventory.selected, itemToInsert)) {
-                player.drop(itemToInsert, true)
-            }
-        } else {
-            val existIndex = player.inventory.findSlotMatchingItem(itemToInsert)
-            if (existIndex in 0..8) {
-                player.inventory.selected = existIndex
-                player.connection.send(ClientboundSetCarriedItemPacket(player.inventory.selected));
-            } else if (existIndex != -1) {
-                player.inventory.setItem(player.inventory.selected, player.inventory.getItem(existIndex))
-                player.inventory.setItem(existIndex, selected)
-            } else {
+        ItemConverter.serverCoroutineScope!!.launch {
+            if (isInHand) {
                 removeMaterials()
-                var slotToInsert = player.inventory.getSlotWithRemainingSpace(itemToInsert)
-                if (slotToInsert == -1) slotToInsert = player.inventory.freeSlot
-                if (slotToInsert in 0..8) {
-                    player.inventory.selected = slotToInsert
-                    player.connection.send(ClientboundSetCarriedItemPacket(player.inventory.selected));
-                }
-                if (!player.inventory.add(itemToInsert)) {
+                if (!player.inventory.add(player.inventory.selected, itemToInsert)) {
                     player.drop(itemToInsert, true)
+                }
+            } else {
+                val existIndex = player.inventory.findSlotMatchingItem(itemToInsert)
+                if (existIndex in 0..8) {
+                    player.inventory.selected = existIndex
+                    player.connection.send(ClientboundSetCarriedItemPacket(player.inventory.selected));
+                } else if (existIndex != -1) {
+                    player.inventory.setItem(player.inventory.selected, player.inventory.getItem(existIndex))
+                    player.inventory.setItem(existIndex, selected)
+                } else {
+                    removeMaterials()
+                    var slotToInsert = player.inventory.getSlotWithRemainingSpace(itemToInsert)
+                    if (slotToInsert == -1) slotToInsert = player.inventory.freeSlot
+                    if (slotToInsert in 0..8) {
+                        player.inventory.selected = slotToInsert
+                        player.connection.send(ClientboundSetCarriedItemPacket(player.inventory.selected));
+                    }
+                    if (!player.inventory.add(itemToInsert)) {
+                        player.drop(itemToInsert, true)
+                    }
                 }
             }
         }

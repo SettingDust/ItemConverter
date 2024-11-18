@@ -2,7 +2,6 @@ package settingdust.item_converter.networking
 
 import com.mojang.serialization.Codec
 import com.mojang.serialization.codecs.RecordCodecBuilder
-import kotlinx.coroutines.launch
 import net.minecraft.network.chat.Component
 import net.minecraft.sounds.SoundSource
 import net.minecraft.util.StringRepresentable
@@ -86,12 +85,6 @@ data class C2SConvertItemPacket(val slot: Int, val target: ItemStack, val mode: 
                     val amount = ratio.denominator * times
                     val itemToInsert = to.predicate.copy().also {
                         it.count = ratio.numerator * times
-                    }
-                    ItemConverter.serverCoroutineScope!!.launch {
-                        slot.safeTake(amount, amount, player)
-                        if (!player.inventory.add(itemToInsert)) {
-                            player.drop(itemToInsert, true)
-                        }
                     }
 
                     itemToInsert to {
