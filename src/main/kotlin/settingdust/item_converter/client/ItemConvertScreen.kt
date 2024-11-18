@@ -169,7 +169,8 @@ data class ItemConvertScreen(
                 OnTooltip { button, pose, mouseX, mouseY ->
                     val itemButton = button as ItemButton
                     renderTooltip(pose, buildList {
-                        add(Component.literal("${ratio.denominator}:${ratio.numerator}"))
+                        if (ratio == Fraction.ONE)
+                            add(Component.literal("${ratio.denominator}:${ratio.numerator}"))
                         addAll(getTooltipFromItem(itemButton.item))
                         if (Minecraft.getInstance().options.advancedItemTooltips) {
                             add(Component.literal("Path:"))
