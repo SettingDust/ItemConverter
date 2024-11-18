@@ -5,6 +5,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import net.minecraft.network.protocol.game.ClientboundSetCarriedItemPacket
 import net.minecraft.server.level.ServerPlayer
+import net.minecraft.sounds.SoundSource
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.phys.HitResult
@@ -61,9 +62,9 @@ object C2SConvertTargetPacket {
                 }
                 .map { (slot, path) ->
                     val ratio = path.edgeList.fold(Fraction.ONE) { acc, edge -> edge.fraction.multiplyBy(acc) }
-                    Triple(slot, path.startVertex.predicate, ratio)
+                    Triple(slot, path, ratio)
                 }
-                .filter { (_, item, ratio) -> item.count >= ratio.denominator }
+                .filter { (_, path, ratio) -> path.startVertex.predicate.count >= ratio.denominator }
                 .sortedBy { (slot, _, _) -> if (slot <= 8) slot + 36 else slot }
 
             val selected = player.inventory.getItem(player.inventory.selected)
@@ -83,25 +84,42 @@ object C2SConvertTargetPacket {
 
                 itemToInsert to {
                     paths
-                        .any { (slot, from, ratio) ->
-                            val count = from.count
+                        .any { (slot, path, ratio) ->
+                            val count = path.startVertex.predicate.count
                             val times = min(count / ratio.denominator, amount / ratio.numerator)
                             player.inventory.removeItem(slot, times * ratio.denominator)
                             val delta = times * ratio.numerator
                             itemToInsert.count += delta
                             amount -= delta
-                            false
+                            val enough = amount <= 0
+                            if (enough) {
+                                val lastEdge = path.edgeList.last()
+                                player.playNotifySound(
+                                    lastEdge.sound,
+                                    SoundSource.BLOCKS,
+                                    (player.random.nextFloat() * 0.7F + 1.0F) * 2.0f * lastEdge.volume,
+                                    lastEdge.pitch
+                                )
+                            }
+                            !enough
                         }
                     Unit
                 }
             } else {
-                val (slot, _, ratio) = paths.firstOrNull() ?: return@launch
+                val (slot, path, ratio) = paths.firstOrNull() ?: return@launch
                 val itemToInsert = to.predicate.copy().also {
                     it.count = ratio.numerator
                 }
                 itemToInsert to {
                     player.inventory.removeItem(slot, ratio.denominator)
-                    Unit
+
+                    val lastEdge = path.edgeList.last()
+                    player.playNotifySound(
+                        lastEdge.sound,
+                        SoundSource.BLOCKS,
+                        (player.random.nextFloat() * 0.7F + 1.0F) * 2.0f * lastEdge.volume,
+                        lastEdge.pitch
+                    )
                 }
             }
 

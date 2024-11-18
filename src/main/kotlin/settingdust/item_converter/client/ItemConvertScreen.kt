@@ -9,7 +9,6 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen
 import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket
-import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.inventory.Slot
 import net.minecraft.world.item.ItemStack
@@ -117,7 +116,6 @@ data class ItemConvertScreen(
                             }
                         }
 
-
                         val selected = player.inventory.getItem(player.inventory.selected)
                         val isInHand = ItemStack.isSameItemSameTags(target, selected)
 
@@ -141,15 +139,17 @@ data class ItemConvertScreen(
                             }
                         }
 
+                        val lastEdge = path.edgeList.last()
+
                         for ((i, slot) in player.inventoryMenu.slots.withIndex()) {
                             if (!ItemStack.isSameItemSameTags(slot.item, button.item)) continue
                             player.level.playSound(
                                 player,
                                 player.blockPosition(),
-                                SoundEvents.ITEM_PICKUP,
+                                lastEdge.sound,
                                 SoundSource.PLAYERS,
-                                0.2F,
-                                (player.random.nextFloat() * 0.7F + 1.0F) * 2.0F
+                                (player.random.nextFloat() * 0.7F + 1.0F) * 2.0f * lastEdge.volume,
+                                lastEdge.pitch
                             )
                             minecraft!!.gameMode!!.handleCreativeModeItemAdd(slot.item, i)
                         }

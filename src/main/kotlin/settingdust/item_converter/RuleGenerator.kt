@@ -8,6 +8,7 @@ import it.unimi.dsi.fastutil.objects.Object2ReferenceOpenCustomHashMap
 import net.minecraft.core.Registry
 import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.sounds.SoundEvent
 import net.minecraft.util.ExtraCodecs
 import net.minecraft.world.Container
 import net.minecraft.world.item.Item
@@ -52,12 +53,18 @@ interface RuleGenerator {
 }
 
 data class RecipeRuleGenerator(
-    val recipeType: ResourceKey<RecipeType<*>>
+    val recipeType: ResourceKey<RecipeType<*>>,
+    val sound: SoundEvent,
+    val pitch: Float,
+    val volume: Float
 ) : RuleGenerator {
     companion object {
         val CODEC = RecordCodecBuilder.create<RecipeRuleGenerator> { instance ->
             instance.group(
-                ResourceKey.codec(Registry.RECIPE_TYPE_REGISTRY).fieldOf("recipe_type").forGetter { it.recipeType }
+                ResourceKey.codec(Registry.RECIPE_TYPE_REGISTRY).fieldOf("recipe_type").forGetter { it.recipeType },
+                SoundEvent.CODEC.fieldOf("sound").forGetter { it.sound },
+                Codec.FLOAT.fieldOf("pitch").forGetter { it.pitch },
+                Codec.FLOAT.fieldOf("volume").forGetter { it.volume }
             ).apply(instance, ::RecipeRuleGenerator)
         }
     }
@@ -127,6 +134,6 @@ data class RecipeRuleGenerator(
             } += output
         }
         return predicatesToOutputs
-            .map { entry -> entry.key.second to ConvertRule(entry.key.first, entry.value) }.toMap()
+            .map { entry -> entry.key.second to ConvertRule(entry.key.first, entry.value, sound, pitch, volume) }.toMap()
     }
 }

@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec
 import com.mojang.serialization.codecs.RecordCodecBuilder
 import kotlinx.coroutines.launch
 import net.minecraft.network.chat.Component
+import net.minecraft.sounds.SoundSource
 import net.minecraft.util.StringRepresentable
 import net.minecraft.world.item.ItemStack
 import net.minecraftforge.network.NetworkEvent
@@ -70,7 +71,13 @@ data class C2SConvertItemPacket(val slot: Int, val target: ItemStack, val mode: 
                     }
                     itemToInsert to {
                         slot.safeTake(ratio.denominator, ratio.denominator, player)
-                        Unit
+                        val lastEdge = path.edgeList.last()
+                        player.playNotifySound(
+                            lastEdge.sound,
+                            SoundSource.BLOCKS,
+                            (player.random.nextFloat() * 0.7F + 1.0F) * 2.0f * lastEdge.volume,
+                            lastEdge.pitch
+                        )
                     }
                 }
 
@@ -89,7 +96,14 @@ data class C2SConvertItemPacket(val slot: Int, val target: ItemStack, val mode: 
 
                     itemToInsert to {
                         slot.safeTake(amount, amount, player)
-                        Unit
+
+                        val lastEdge = path.edgeList.last()
+                        player.playNotifySound(
+                            lastEdge.sound,
+                            SoundSource.BLOCKS,
+                            (player.random.nextFloat() * 0.7F + 1.0F) * 2.0f * lastEdge.volume,
+                            lastEdge.pitch
+                        )
                     }
                 }
             }

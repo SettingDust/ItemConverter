@@ -131,13 +131,13 @@ object ItemConverter {
                     ConvertRules.graph.addEdge(
                         inputPredicate,
                         outputPredicate,
-                        FractionUnweightedEdge(fraction)
+                        FractionUnweightedEdge(fraction, rule.sound, rule.pitch, rule.volume)
                     )
                     if (CommonConfig.config.bidirectionalConversion)
                         ConvertRules.graph.addEdge(
                             outputPredicate,
                             inputPredicate,
-                            FractionUnweightedEdge(fraction.invert())
+                            FractionUnweightedEdge(fraction.invert(), rule.sound, rule.pitch, rule.volume)
                         )
                 } catch (t: Throwable) {
                     LOGGER.error("Failed to add edge for recipe $holder with input $input and output $output", t)
