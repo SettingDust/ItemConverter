@@ -118,7 +118,8 @@ object ItemConverter {
         ConvertRules.graph = SimpleDirectedWeightedGraph<SimpleItemPredicate, FractionUnweightedEdge>(null) {
             FractionUnweightedEdge(Fraction.ZERO)
         }
-        for (rule in registryAccess.registryOrThrow(ConvertRules.KEY).holders().asSequence().map { it.value() }) {
+        for (holder in registryAccess.registryOrThrow(ConvertRules.KEY).holders().asSequence()) {
+            val rule = holder.value()
             val input = rule.input
             val inputPredicate = SimpleItemPredicate(input.copy().also { it.count = 1 })
             ConvertRules.graph.addVertex(inputPredicate)
@@ -126,16 +127,20 @@ object ItemConverter {
                 val outputPredicate = SimpleItemPredicate(output.copy().also { it.count = 1 })
                 val fraction = Fraction.getReducedFraction(output.count, input.count)
                 ConvertRules.graph.addVertex(outputPredicate)
-                ConvertRules.graph.addEdge(
-                    inputPredicate,
-                    outputPredicate,
-                    FractionUnweightedEdge(fraction)
-                )
-                ConvertRules.graph.addEdge(
-                    outputPredicate,
-                    inputPredicate,
-                    FractionUnweightedEdge(fraction.invert())
-                )
+                try {
+                    ConvertRules.graph.addEdge(
+                        inputPredicate,
+                        outputPredicate,
+                        FractionUnweightedEdge(fraction)
+                    )
+                    ConvertRules.graph.addEdge(
+                        outputPredicate,
+                        inputPredicate,
+                        FractionUnweightedEdge(fraction.invert())
+                    )
+                } catch (t: Throwable) {
+                    LOGGER.error("Failed to add edge for recipe $holder with input $input and output $output", t)
+                }
             }
         }
     }
