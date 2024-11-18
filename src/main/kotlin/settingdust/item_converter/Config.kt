@@ -6,9 +6,11 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.encodeToStream
 import net.minecraftforge.fml.loading.FMLPaths
+import kotlin.io.path.createFile
 import kotlin.io.path.div
 import kotlin.io.path.inputStream
 import kotlin.io.path.outputStream
+import kotlin.io.path.writeText
 
 internal val json = Json {
     encodeDefaults = true
@@ -24,6 +26,10 @@ data class ClientConfig(val pressTicks: Int = 20) {
 
         @OptIn(ExperimentalSerializationApi::class)
         fun reload() {
+            runCatching {
+                path.createFile()
+                path.writeText("{}")
+            }
             config = json.decodeFromStream(path.inputStream())
             json.encodeToStream(config, path.outputStream())
         }
