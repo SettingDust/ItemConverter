@@ -3,6 +3,7 @@ package settingdust.item_converter.networking
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import net.minecraft.network.protocol.game.ClientboundSetCarriedItemPacket
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.phys.HitResult
@@ -64,10 +65,11 @@ object C2SConvertTargetPacket {
                 .filter { (_, item, ratio) -> item.count >= ratio.denominator }
                 .sortedByDescending { (slot, _, _) -> slot == player.inventory.selected }
 
+            val selected = player.inventory.getItem(player.inventory.selected)
+
             val shift = player.isShiftKeyDown
 
-            if (shift) {
-                val selected = player.inventory.getItem(player.inventory.selected)
+            val (itemToInsert, removeMaterials) = if (shift) {
                 var amount =
                     if (ItemStack.isSameItemSameTags(target, selected)) {
                         val count = selected.maxStackSize - selected.count
@@ -78,33 +80,49 @@ object C2SConvertTargetPacket {
                     count = 0
                 }
 
-                paths
-                    .any { (slot, from, ratio) ->
-                        val count = from.count
-                        val times = min(count / ratio.denominator, amount / ratio.numerator)
-                        player.inventory.removeItem(slot, times * ratio.denominator)
-                        val delta = times * ratio.numerator
-                        itemToInsert.count += delta
-                        amount -= delta
-                        false
-                    }
-
-                if (!player.inventory.add(player.inventory.selected, itemToInsert))
-                    if (!player.inventory.add(itemToInsert))
-                        player.drop(itemToInsert, true)
-
+                itemToInsert to {
+                    paths
+                        .any { (slot, from, ratio) ->
+                            val count = from.count
+                            val times = min(count / ratio.denominator, amount / ratio.numerator)
+                            player.inventory.removeItem(slot, times * ratio.denominator)
+                            val delta = times * ratio.numerator
+                            itemToInsert.count += delta
+                            amount -= delta
+                            false
+                        }
+                }
             } else {
                 val (slot, _, ratio) = paths.firstOrNull() ?: return@launch
-                player.inventory.removeItem(slot, ratio.denominator)
                 val itemToInsert = to.predicate.copy().also {
                     it.count = ratio.numerator
                 }
-                if (
-                    !ItemStack.isSameItemSameTags(player.inventory.getItem(player.inventory.selected), itemToInsert)
-                    || !player.inventory.add(player.inventory.selected, itemToInsert)
-                )
-                    if (!player.inventory.add(itemToInsert))
+                itemToInsert to {
+                    player.inventory.removeItem(slot, ratio.denominator)
+                }
+            }
+
+            val isInHand = ItemStack.isSameItemSameTags(itemToInsert, selected)
+
+            if (isInHand) {
+                removeMaterials()
+                if (!player.inventory.add(player.inventory.selected, itemToInsert)) {
+                    player.drop(itemToInsert, true)
+                }
+            } else {    
+                val existIndex = player.inventory.findSlotMatchingItem(itemToInsert)
+                if (existIndex in 0..8) {
+                    player.inventory.selected = existIndex
+                    player.connection.send(ClientboundSetCarriedItemPacket(player.inventory.selected));
+                } else if (existIndex != -1) {
+                    player.inventory.setItem(player.inventory.selected, player.inventory.getItem(existIndex))
+                    player.inventory.setItem(existIndex, selected)
+                } else {
+                    removeMaterials()
+                    if (!player.inventory.add(itemToInsert)) {
                         player.drop(itemToInsert, true)
+                    }
+                }
             }
         }
     }.onFailure {
