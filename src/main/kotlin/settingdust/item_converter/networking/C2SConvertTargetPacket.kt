@@ -63,7 +63,7 @@ object C2SConvertTargetPacket {
                     Triple(slot, path.startVertex.predicate, ratio)
                 }
                 .filter { (_, item, ratio) -> item.count >= ratio.denominator }
-                .sortedByDescending { (slot, _, _) -> slot == player.inventory.selected }
+                .sortedBy { (slot, _, _) -> if (slot <= 8) slot + 36 else slot }
 
             val selected = player.inventory.getItem(player.inventory.selected)
 
@@ -109,7 +109,7 @@ object C2SConvertTargetPacket {
                 if (!player.inventory.add(player.inventory.selected, itemToInsert)) {
                     player.drop(itemToInsert, true)
                 }
-            } else {    
+            } else {
                 val existIndex = player.inventory.findSlotMatchingItem(itemToInsert)
                 if (existIndex in 0..8) {
                     player.inventory.selected = existIndex
@@ -119,8 +119,10 @@ object C2SConvertTargetPacket {
                     player.inventory.setItem(existIndex, selected)
                 } else {
                     removeMaterials()
-                    if (!player.inventory.add(itemToInsert)) {
-                        player.drop(itemToInsert, true)
+                    if (!player.inventory.add(player.inventory.selected, itemToInsert)) {
+                        if (!player.inventory.add(itemToInsert)) {
+                            player.drop(itemToInsert, true)
+                        }
                     }
                 }
             }
