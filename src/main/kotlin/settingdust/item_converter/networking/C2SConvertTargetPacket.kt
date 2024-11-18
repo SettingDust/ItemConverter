@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import net.minecraft.network.protocol.game.ClientboundSetCarriedItemPacket
+import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.phys.HitResult
@@ -91,6 +92,7 @@ object C2SConvertTargetPacket {
                             amount -= delta
                             false
                         }
+                    Unit
                 }
             } else {
                 val (slot, _, ratio) = paths.firstOrNull() ?: return@launch
@@ -99,35 +101,45 @@ object C2SConvertTargetPacket {
                 }
                 itemToInsert to {
                     player.inventory.removeItem(slot, ratio.denominator)
+                    Unit
                 }
             }
 
-            val isInHand = ItemStack.isSameItemSameTags(itemToInsert, selected)
+            insertResult(itemToInsert, selected, removeMaterials, player)
+        }
+    }.onFailure {
+        ItemConverter.LOGGER.error("Error handling C2SConvertTargetPacket", it)
+    }
 
-            if (isInHand) {
+    fun insertResult(
+        itemToInsert: ItemStack,
+        selected: ItemStack,
+        removeMaterials: () -> Unit,
+        player: ServerPlayer
+    ) {
+        val isInHand = ItemStack.isSameItemSameTags(itemToInsert, selected)
+
+        if (isInHand) {
+            removeMaterials()
+            if (!player.inventory.add(player.inventory.selected, itemToInsert)) {
+                player.drop(itemToInsert, true)
+            }
+        } else {
+            val existIndex = player.inventory.findSlotMatchingItem(itemToInsert)
+            if (existIndex in 0..8) {
+                player.inventory.selected = existIndex
+                player.connection.send(ClientboundSetCarriedItemPacket(player.inventory.selected));
+            } else if (existIndex != -1) {
+                player.inventory.setItem(player.inventory.selected, player.inventory.getItem(existIndex))
+                player.inventory.setItem(existIndex, selected)
+            } else {
                 removeMaterials()
                 if (!player.inventory.add(player.inventory.selected, itemToInsert)) {
-                    player.drop(itemToInsert, true)
-                }
-            } else {
-                val existIndex = player.inventory.findSlotMatchingItem(itemToInsert)
-                if (existIndex in 0..8) {
-                    player.inventory.selected = existIndex
-                    player.connection.send(ClientboundSetCarriedItemPacket(player.inventory.selected));
-                } else if (existIndex != -1) {
-                    player.inventory.setItem(player.inventory.selected, player.inventory.getItem(existIndex))
-                    player.inventory.setItem(existIndex, selected)
-                } else {
-                    removeMaterials()
-                    if (!player.inventory.add(player.inventory.selected, itemToInsert)) {
-                        if (!player.inventory.add(itemToInsert)) {
-                            player.drop(itemToInsert, true)
-                        }
+                    if (!player.inventory.add(itemToInsert)) {
+                        player.drop(itemToInsert, true)
                     }
                 }
             }
         }
-    }.onFailure {
-        ItemConverter.LOGGER.error("Error handling C2SConvertTargetPacket", it)
     }
 }

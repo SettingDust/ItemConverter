@@ -3,7 +3,6 @@ package settingdust.item_converter.networking
 import com.mojang.serialization.Codec
 import com.mojang.serialization.codecs.RecordCodecBuilder
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import net.minecraft.network.chat.Component
 import net.minecraft.util.StringRepresentable
 import net.minecraft.world.item.ItemStack
@@ -61,38 +60,43 @@ data class C2SConvertItemPacket(val slot: Int, val target: ItemStack, val mode: 
                 return@runCatching
             }
             val ratio = path.edgeList.fold(Fraction.ONE) { acc, edge -> edge.fraction.multiplyBy(acc) }
-            when (packet.mode) {
+            val (itemToInsert, removeMaterials) = when (packet.mode) {
                 Mode.SINGLE_CLICK -> {
                     if (ratio.denominator > fromItem.count) {
                         return@runCatching
                     }
-                    runBlocking(ItemConverter.serverCoroutineDispatcher!!) {
-                        slot.safeTake(ratio.denominator, ratio.denominator, player)
-                    }
                     val itemToInsert = to.predicate.copy().also {
                         it.count = ratio.numerator
                     }
-                    ItemConverter.serverCoroutineScope!!.launch {
-                        if (!player.inventory.add(itemToInsert)) {
-                            player.drop(itemToInsert, true)
-                        }
+                    itemToInsert to {
+                        slot.safeTake(ratio.denominator, ratio.denominator, player)
+                        Unit
                     }
                 }
 
                 Mode.SHIFT_CLICK -> {
                     val times = fromItem.count / ratio.denominator
                     val amount = ratio.denominator * times
-                    runBlocking(ItemConverter.serverCoroutineDispatcher!!) { slot.safeTake(amount, amount, player) }
                     val itemToInsert = to.predicate.copy().also {
                         it.count = ratio.numerator * times
                     }
                     ItemConverter.serverCoroutineScope!!.launch {
+                        slot.safeTake(amount, amount, player)
                         if (!player.inventory.add(itemToInsert)) {
                             player.drop(itemToInsert, true)
                         }
                     }
+
+                    itemToInsert to {
+                        slot.safeTake(amount, amount, player)
+                        Unit
+                    }
                 }
             }
+
+            val selected = player.inventory.getItem(player.inventory.selected)
+
+            C2SConvertTargetPacket.insertResult(itemToInsert, selected, removeMaterials, player)
         }.onFailure {
             ItemConverter.LOGGER.error("Error handling C2SConvertItemPacket", it)
         }

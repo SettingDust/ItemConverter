@@ -8,6 +8,7 @@ import net.minecraft.client.gui.components.Button.OnTooltip
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen
 import net.minecraft.network.chat.Component
+import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.inventory.Slot
@@ -107,14 +108,36 @@ data class ItemConvertScreen(
                         when (mode) {
                             Mode.SINGLE_CLICK -> {
                                 target.count = ratio.numerator
-                                player.inventory.add(target)
                             }
 
                             Mode.SHIFT_CLICK -> {
                                 val times = input.count / ratio.denominator
                                 val amount = ratio.denominator * times
                                 target.count = amount
-                                player.inventory.add(target)
+                            }
+                        }
+
+
+                        val selected = player.inventory.getItem(player.inventory.selected)
+                        val isInHand = ItemStack.isSameItemSameTags(target, selected)
+
+                        if (isInHand) {
+                            player.inventory.add(player.inventory.selected, target)
+                        } else {
+                            val existIndex = player.inventory.findSlotMatchingItem(target)
+                            if (existIndex in 0..8) {
+                                player.inventory.selected = existIndex
+                                player.connection.send(ServerboundSetCarriedItemPacket(player.inventory.selected));
+                            } else if (existIndex != -1) {
+                                player.inventory.setItem(
+                                    player.inventory.selected,
+                                    player.inventory.getItem(existIndex)
+                                )
+                                player.inventory.setItem(existIndex, selected)
+                            } else {
+                                if (!player.inventory.add(player.inventory.selected, target)) {
+                                    player.inventory.add(target)
+                                }
                             }
                         }
 
