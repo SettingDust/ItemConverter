@@ -134,10 +134,12 @@ object C2SConvertTargetPacket {
                 player.inventory.setItem(existIndex, selected)
             } else {
                 removeMaterials()
-                if (!player.inventory.add(player.inventory.selected, itemToInsert)) {
-                    if (!player.inventory.add(itemToInsert)) {
-                        player.drop(itemToInsert, true)
-                    }
+                if (player.inventory.freeSlot in 0..8) {
+                    player.inventory.selected = player.inventory.freeSlot
+                    player.connection.send(ClientboundSetCarriedItemPacket(player.inventory.selected));
+                }
+                if (!player.inventory.add(itemToInsert)) {
+                    player.drop(itemToInsert, true)
                 }
             }
         }

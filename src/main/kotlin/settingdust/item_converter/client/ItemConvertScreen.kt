@@ -198,7 +198,14 @@ data class ItemConvertScreen(
     }
 
     override fun render(poseStack: PoseStack, mouseX: Int, mouseY: Int, partialTick: Float) {
-        if (!SlotInteractManager.converting || getFrom().isEmpty) onClose()
+        if (!SlotInteractManager.converting) {
+            renderables.asSequence()
+                .filterIsInstance<ItemButton>()
+                .firstOrNull { it.isHoveredOrFocused }
+                ?.onPress()
+            onClose()
+        }
+        if (getFrom().isEmpty) onClose()
         renderBackground(poseStack)
         super.render(poseStack, mouseX, mouseY, partialTick)
     }
