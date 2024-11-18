@@ -118,8 +118,8 @@ data class ItemConvertScreen(
                             }
                         }
 
-                        for ((i, it) in player.inventoryMenu.slots.withIndex()) {
-                            if (!ItemStack.isSameItemSameTags(it.item, button.item)) continue
+                        for ((i, slot) in player.inventoryMenu.slots.withIndex()) {
+                            if (!ItemStack.isSameItemSameTags(slot.item, button.item)) continue
                             player.level.playSound(
                                 player,
                                 player.blockPosition(),
@@ -128,7 +128,7 @@ data class ItemConvertScreen(
                                 0.2F,
                                 (player.random.nextFloat() * 0.7F + 1.0F) * 2.0F
                             )
-                            minecraft!!.gameMode!!.handleCreativeModeItemAdd(it.item, i)
+                            minecraft!!.gameMode!!.handleCreativeModeItemAdd(slot.item, i)
                         }
                     } else {
                         Networking.channel.sendToServer(
@@ -141,10 +141,10 @@ data class ItemConvertScreen(
                     }
                 },
                 OnTooltip { button, pose, mouseX, mouseY ->
-                    val button = button as ItemButton
+                    val itemButton = button as ItemButton
                     renderTooltip(pose, buildList {
                         add(Component.literal("${ratio.denominator}:${ratio.numerator}"))
-                        addAll(getTooltipFromItem(button.item))
+                        addAll(getTooltipFromItem(itemButton.item))
                         if (Minecraft.getInstance().options.advancedItemTooltips) {
                             add(Component.literal("Path:"))
                             if (path.edgeList.isNotEmpty()) {
@@ -167,7 +167,7 @@ data class ItemConvertScreen(
                                 add(secondComponent)
                             }
                         }
-                    }, button.item.tooltipImage, mouseX, mouseY)
+                    }, itemButton.item.tooltipImage, mouseX, mouseY)
                 }
             )
             addRenderableWidget(button)

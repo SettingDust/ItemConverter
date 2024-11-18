@@ -51,6 +51,7 @@ object ItemConverter {
 
     fun clientInit() {
         SlotInteractManager
+        ClientConfig.reload()
     }
 
     fun id(path: String) = ResourceLocation(ID, path)

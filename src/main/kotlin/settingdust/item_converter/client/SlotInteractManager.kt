@@ -17,18 +17,17 @@ import net.minecraftforge.client.gui.overlay.ForgeGui
 import net.minecraftforge.client.gui.overlay.GuiOverlayManager
 import net.minecraftforge.client.gui.overlay.IGuiOverlay
 import net.minecraftforge.event.TickEvent
+import settingdust.item_converter.ClientConfig
 import settingdust.item_converter.networking.C2SConvertTargetPacket
 import settingdust.item_converter.networking.Networking
 import thedarkcolour.kotlinforforge.forge.FORGE_BUS
 import thedarkcolour.kotlinforforge.forge.MOD_BUS
 
 object SlotInteractManager {
-    const val PRESS_TICKS = 20
     var pressedTicks = 0
     var converting = false
     val SLOT_INTERACT_KEY =
         KeyMapping("key.item_converter.slot_interact", InputConstants.KEY_LALT, "key.categories.inventory")
-    val PICK_ITEM_KEY = Minecraft.getInstance().options.keyPickItem
 
     init {
         MOD_BUS.addListener { event: RegisterKeyMappingsEvent ->
@@ -84,7 +83,7 @@ object SlotInteractManager {
 
         FORGE_BUS.addListener { event: ScreenEvent.Render.Post ->
             val screen = event.screen
-            if (pressedTicks <= PRESS_TICKS) {
+            if (pressedTicks <= ClientConfig.config.pressTicks) {
                 if (screen is AbstractContainerScreen<*>) {
                     val hoveredSlot = screen.slotUnderMouse
                     if (hoveredSlot != null && screen.menu.carried.isEmpty && !hoveredSlot.item.isEmpty) {
@@ -101,7 +100,7 @@ object SlotInteractManager {
         FORGE_BUS.addListener { event: RenderGuiEvent.Post ->
             val minecraft = Minecraft.getInstance()
             val screen = minecraft.screen
-            if (pressedTicks > PRESS_TICKS) {
+            if (pressedTicks > ClientConfig.config.pressTicks) {
                 if (!converting) {
                     if (screen is AbstractContainerScreen<*>) {
                         minecraft.pushGuiLayer(
@@ -154,7 +153,7 @@ data class SlotInteractProgress(
     fun render(poseStack: PoseStack) {
         if (SlotInteractManager.converting) return
         val progress =
-            (SlotInteractManager.pressedTicks / SlotInteractManager.PRESS_TICKS.toFloat()).coerceIn(0f, 1f)
+            (SlotInteractManager.pressedTicks / ClientConfig.config.pressTicks.toFloat()).coerceIn(0f, 1f)
         val width = (WIDTH * progress).toInt()
         if (width > 0) {
             fill(poseStack, x, y, x + width, y + HEIGHT, COLOR)
