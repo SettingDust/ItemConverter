@@ -55,7 +55,7 @@ data class C2SConvertItemPacket(val slot: Int, val target: ItemStack, val mode: 
                 return@runCatching
             }
             val path = DijkstraShortestPath.findPathBetween(ConvertRules.graph, from, to)
-            if (path == null) {
+            if (path == null || path.vertexList.size < 2) {
                 ItemConverter.LOGGER.error("${player.displayName.string} trying to convert ${fromItem.displayName.string} to unreachable target ${packet.target.displayName.string}")
                 return@runCatching
             }

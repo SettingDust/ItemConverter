@@ -209,7 +209,7 @@ data class ItemConvertScreen(
                 ?.onPress()
             onClose()
         }
-        if (getFrom().isEmpty) onClose()
+        if (slot.item != input) init()
         renderBackground(poseStack)
         super.render(poseStack, mouseX, mouseY, partialTick)
     }
