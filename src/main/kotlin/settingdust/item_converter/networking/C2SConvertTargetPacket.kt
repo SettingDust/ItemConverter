@@ -48,6 +48,8 @@ object C2SConvertTargetPacket {
         ItemConverter.serverCoroutineScope!!.launch(CoroutineExceptionHandler { context, throwable ->
             ItemConverter.LOGGER.error("Error while converting", throwable)
         }) {
+
+            val selected = player.inventory.getItem(player.inventory.selected)
             val paths = player.inventory.items.asSequence()
                 .mapIndexed { slot, it -> slot to it }
                 .filter { (_, it) -> !ItemStack.isSameItemSameTags(it, target) }
@@ -66,8 +68,6 @@ object C2SConvertTargetPacket {
                 }
                 .filter { (_, path, ratio) -> path.startVertex.predicate.count >= ratio.denominator }
                 .sortedBy { (slot, _, _) -> if (slot <= 8) slot + 36 else slot }
-
-            val selected = player.inventory.getItem(player.inventory.selected)
 
             val shift = player.isShiftKeyDown
 
@@ -106,36 +106,42 @@ object C2SConvertTargetPacket {
                     Unit
                 }
             } else {
-                val (slot, path, ratio) = paths.firstOrNull() ?: return@launch
-                val itemToInsert = to.predicate.copy().also {
-                    it.count = ratio.numerator
-                }
-                itemToInsert to {
-                    player.inventory.removeItem(slot, ratio.denominator)
+                val context = paths.firstOrNull()
+                if (context == null) {
+                    ItemStack.EMPTY to {}
+                } else {
+                    val (slot, path, ratio) = context
+                    val itemToInsert = to.predicate.copy().also {
+                        it.count = ratio.numerator
+                    }
+                    itemToInsert to {
+                        player.inventory.removeItem(slot, ratio.denominator)
 
-                    val lastEdge = path.edgeList.last()
-                    player.playNotifySound(
-                        lastEdge.sound,
-                        SoundSource.BLOCKS,
-                        (player.random.nextFloat() * 0.7F + 1.0F) * 2.0f * lastEdge.volume,
-                        lastEdge.pitch
-                    )
+                        val lastEdge = path.edgeList.last()
+                        player.playNotifySound(
+                            lastEdge.sound,
+                            SoundSource.BLOCKS,
+                            (player.random.nextFloat() * 0.7F + 1.0F) * 2.0f * lastEdge.volume,
+                            lastEdge.pitch
+                        )
+                    }
                 }
             }
 
-            insertResult(itemToInsert, selected, removeMaterials, player)
+            insertResult(target, itemToInsert, selected, removeMaterials, player)
         }
     }.onFailure {
         ItemConverter.LOGGER.error("Error handling C2SConvertTargetPacket", it)
     }
 
     fun insertResult(
+        target: ItemStack,
         itemToInsert: ItemStack,
         selected: ItemStack,
         removeMaterials: () -> Unit,
         player: ServerPlayer
     ) {
-        val isInHand = ItemStack.isSameItemSameTags(itemToInsert, selected)
+        val isInHand = ItemStack.isSameItemSameTags(target, selected)
 
         ItemConverter.serverCoroutineScope!!.launch {
             runCatching {
@@ -145,7 +151,7 @@ object C2SConvertTargetPacket {
                         player.drop(itemToInsert, true)
                     }
                 } else {
-                    val existIndex = player.inventory.findSlotMatchingItem(itemToInsert)
+                    val existIndex = player.inventory.findSlotMatchingItem(target)
                     if (existIndex in 0..8) {
                         player.inventory.selected = existIndex
                         player.connection.send(ClientboundSetCarriedItemPacket(player.inventory.selected));

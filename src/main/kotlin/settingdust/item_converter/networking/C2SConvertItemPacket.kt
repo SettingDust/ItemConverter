@@ -103,7 +103,7 @@ data class C2SConvertItemPacket(val slot: Int, val target: ItemStack, val mode: 
 
             val selected = player.inventory.getItem(player.inventory.selected)
 
-            C2SConvertTargetPacket.insertResult(itemToInsert, selected, removeMaterials, player)
+            C2SConvertTargetPacket.insertResult(packet.target, itemToInsert, selected, removeMaterials, player)
         }.onFailure {
             ItemConverter.LOGGER.error("Error handling C2SConvertItemPacket", it)
         }
