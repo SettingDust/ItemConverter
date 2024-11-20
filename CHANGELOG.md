@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2024-11-19
+### :bug: Bug Fixes
+- [`3dc6c5e`](https://github.com/game-design-driven/ItemConverter/commit/3dc6c5e9e333db8fae38fa02b824a5a1f263b8d0) - refresh gui if item changed *(commit by [@SettingDust](https://github.com/SettingDust))*
+
+
 ## [0.1.0] - 2024-11-18
 ### :sparkles: New Features
 - [`4868cec`](https://github.com/game-design-driven/ItemConverter/commit/4868cecf65f442fba293ca2086a805028833ee23) - generate the json correctly *(commit by [@SettingDust](https://github.com/SettingDust))*
@@ -53,3 +58,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [`62f21ae`](https://github.com/game-design-driven/ItemConverter/commit/62f21aef0b6820af126a78331c21b0e16c8d32ed) - don't show ration if 1:1 *(commit by [@SettingDust](https://github.com/SettingDust))*
 
 [0.1.0]: https://github.com/game-design-driven/ItemConverter/compare/0.0.0...0.1.0
+[0.1.1]: https://github.com/game-design-driven/ItemConverter/compare/0.1.0...0.1.1
