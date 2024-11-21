@@ -17,7 +17,7 @@ import net.minecraftforge.client.event.ScreenEvent
 import net.minecraftforge.common.MinecraftForge
 import org.apache.commons.lang3.math.Fraction
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath
-import org.jgrapht.traverse.BreadthFirstIterator
+import org.jgrapht.traverse.DepthFirstIterator
 import settingdust.item_converter.ConvertRules
 import settingdust.item_converter.DrawableNineSliceTexture
 import settingdust.item_converter.ItemConverter
@@ -73,13 +73,24 @@ data class ItemConvertScreen(
             return
         }
         val targets =
-            BreadthFirstIterator(ConvertRules.graph, from).asSequence().mapNotNull { to ->
-                val path = DijkstraShortestPath.findPathBetween(ConvertRules.graph, from, to) ?: return@mapNotNull null
-                if (path.vertexList.size == 1) return@mapNotNull null
-                val ratio = path.edgeList.fold(Fraction.ONE) { acc, edge -> edge.fraction.multiplyBy(acc) }
-                if (ratio.denominator > input.count) return@mapNotNull null
-                return@mapNotNull Triple(to, path, ratio)
-            }.toList()
+            DepthFirstIterator(ConvertRules.graph, from)
+                .asSequence()
+                .mapNotNull { to ->
+                    val path =
+                        DijkstraShortestPath.findPathBetween(ConvertRules.graph, from, to) ?: return@mapNotNull null
+                    if (path.vertexList.size == 1) return@mapNotNull null
+                    val ratio = path.edgeList.fold(Fraction.ONE) { acc, edge -> edge.fraction.multiplyBy(acc) }
+                    if (ratio.denominator > input.count) return@mapNotNull null
+                    return@mapNotNull Triple(to, path, ratio)
+                }
+                .toList()
+                .sortedWith(
+                    compareBy<Triple<SimpleItemPredicate, *, *>> { (to) ->
+                        to.predicate.item.builtInRegistryHolder().tags().toList().toString()
+                    }.thenBy { (to) ->
+                        to.predicate.item.builtInRegistryHolder().key().location().toString().reversed()
+                    }
+                )
 
         if (targets.isEmpty()) {
             onClose()
