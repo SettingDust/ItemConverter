@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2024-11-21
+### :sparkles: New Features
+- [`1b60f9c`](https://github.com/game-design-driven/ItemConverter/commit/1b60f9c2c6efbded8b35638c1ca066c2930eaca1) - allow specify `bidirectional` for rules *(commit by [@SettingDust](https://github.com/SettingDust))*
+- [`c83aea2`](https://github.com/game-design-driven/ItemConverter/commit/c83aea26d76340f93f495d7a23f5b0970120767a) - sort the targets by tag + reversed id *(commit by [@SettingDust](https://github.com/SettingDust))*
+- [`a06274b`](https://github.com/game-design-driven/ItemConverter/commit/a06274b4775945f471de4c818dd61626ebf85b9f) - sort the targets by class name + reversed id *(commit by [@SettingDust](https://github.com/SettingDust))*
+
+
 ## [0.2.0] - 2024-11-20
 ### :sparkles: New Features
 - [`76b9536`](https://github.com/game-design-driven/ItemConverter/commit/76b9536f88796e26817f728573ccdeccce9ec07e) - allow pick without source *(commit by [@SettingDust](https://github.com/SettingDust))*
@@ -65,3 +72,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.0]: https://github.com/game-design-driven/ItemConverter/compare/0.0.0...0.1.0
 [0.1.1]: https://github.com/game-design-driven/ItemConverter/compare/0.1.0...0.1.1
 [0.2.0]: https://github.com/game-design-driven/ItemConverter/compare/0.1.1...0.2.0
+[0.3.0]: https://github.com/game-design-driven/ItemConverter/compare/0.2.0...0.3.0
