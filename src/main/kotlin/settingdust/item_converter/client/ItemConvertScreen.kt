@@ -11,6 +11,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.inventory.Slot
+import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.ItemStack
 import net.minecraftforge.client.ForgeHooksClient
 import net.minecraftforge.client.event.ScreenEvent
@@ -86,7 +87,8 @@ data class ItemConvertScreen(
                 .toList()
                 .sortedWith(
                     compareBy<Triple<SimpleItemPredicate, *, *>> { (to) ->
-                        to.predicate.item.builtInRegistryHolder().tags().toList().toString()
+                        val item = to.predicate.item
+                        if (item is BlockItem) item.block.javaClass.name else item.javaClass.name
                     }.thenBy { (to) ->
                         to.predicate.item.builtInRegistryHolder().key().location().toString().reversed()
                     }
