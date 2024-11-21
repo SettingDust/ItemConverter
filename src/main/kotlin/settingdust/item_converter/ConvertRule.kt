@@ -23,7 +23,8 @@ data class ConvertRule(
     val output: List<ItemStack>,
     val sound: SoundEvent,
     val pitch: Float,
-    val volume: Float
+    val volume: Float,
+    val bidirectional: Boolean = false
 ) {
     companion object {
         val CODEC = RecordCodecBuilder.create<ConvertRule> { instance ->
@@ -32,7 +33,8 @@ data class ConvertRule(
                 MoreCodecs.ITEM_STACK.listOf().fieldOf("output").forGetter { it.output },
                 SoundEvent.CODEC.fieldOf("sound").forGetter { it.sound },
                 Codec.FLOAT.fieldOf("pitch").forGetter { it.pitch },
-                Codec.FLOAT.fieldOf("volume").forGetter { it.volume }
+                Codec.FLOAT.fieldOf("volume").forGetter { it.volume },
+                Codec.BOOL.optionalFieldOf("bidirectional", false).forGetter { it.bidirectional }
             ).apply(instance, ::ConvertRule)
         }
     }

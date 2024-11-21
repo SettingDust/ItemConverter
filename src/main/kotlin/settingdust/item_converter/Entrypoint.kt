@@ -133,7 +133,7 @@ object ItemConverter {
                         outputPredicate,
                         FractionUnweightedEdge(fraction, rule.sound, rule.pitch, rule.volume)
                     )
-                    if (CommonConfig.config.bidirectionalConversion)
+                    if (CommonConfig.config.bidirectionalConversion || rule.bidirectional)
                         ConvertRules.graph.addEdge(
                             outputPredicate,
                             inputPredicate,
