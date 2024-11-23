@@ -13,6 +13,8 @@ import net.minecraft.sounds.SoundSource
 import net.minecraft.world.inventory.Slot
 import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.ItemStack
+import net.minecraftforge.api.distmarker.Dist
+import net.minecraftforge.api.distmarker.OnlyIn
 import net.minecraftforge.client.ForgeHooksClient
 import net.minecraftforge.client.event.ScreenEvent
 import net.minecraftforge.common.MinecraftForge
@@ -27,6 +29,7 @@ import settingdust.item_converter.networking.C2SConvertItemPacket
 import settingdust.item_converter.networking.C2SConvertItemPacket.Mode
 import settingdust.item_converter.networking.Networking
 
+@OnlyIn(Dist.CLIENT)
 data class ItemConvertScreen(
     val parent: Screen?, val slot: Slot
 ) : Screen(Component.translatable("gui.${ItemConverter.ID}.item_convert")) {

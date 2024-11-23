@@ -5,6 +5,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.encodeToStream
+import net.minecraftforge.api.distmarker.Dist
+import net.minecraftforge.api.distmarker.OnlyIn
 import net.minecraftforge.fml.loading.FMLPaths
 import kotlin.io.path.createFile
 import kotlin.io.path.div
@@ -17,6 +19,7 @@ internal val json = Json {
     prettyPrint = true
 }
 
+@OnlyIn(Dist.CLIENT)
 @Serializable
 data class ClientConfig(val pressTicks: Int = 20) {
     companion object {

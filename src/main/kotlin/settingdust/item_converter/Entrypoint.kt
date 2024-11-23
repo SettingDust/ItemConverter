@@ -12,7 +12,6 @@ import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
 import net.minecraftforge.api.distmarker.Dist
-import net.minecraftforge.client.event.ClientPlayerNetworkEvent
 import net.minecraftforge.event.RegisterCommandsEvent
 import net.minecraftforge.event.server.ServerStartingEvent
 import net.minecraftforge.event.server.ServerStoppingEvent
@@ -23,7 +22,7 @@ import net.minecraftforge.fml.loading.FMLPaths
 import org.apache.commons.lang3.math.Fraction
 import org.apache.logging.log4j.LogManager
 import org.jgrapht.graph.SimpleDirectedWeightedGraph
-import settingdust.item_converter.client.SlotInteractManager
+import settingdust.item_converter.client.ItemConverterClient
 import settingdust.item_converter.networking.Networking
 import thedarkcolour.kotlinforforge.forge.FORGE_BUS
 import thedarkcolour.kotlinforforge.forge.MOD_BUS
@@ -46,12 +45,7 @@ object ItemConverter {
         MOD_BUS.register(ModEventHandler)
         FORGE_BUS.register(this)
         Networking
-        if (FMLEnvironment.dist == Dist.CLIENT) clientInit()
-    }
-
-    fun clientInit() {
-        SlotInteractManager
-        ClientConfig.reload()
+        if (FMLEnvironment.dist == Dist.CLIENT) ItemConverterClient
     }
 
     fun id(path: String) = ResourceLocation(ID, path)
@@ -107,14 +101,7 @@ object ItemConverter {
         serverCoroutineScope = null
     }
 
-
-    @SubscribeEvent
-    fun onClientPlayerNetwork(event: ClientPlayerNetworkEvent.LoggingIn) {
-        refreshGraph(event.player.level.registryAccess())
-    }
-
-
-    private fun refreshGraph(registryAccess: RegistryAccess) {
+    fun refreshGraph(registryAccess: RegistryAccess) {
         ConvertRules.graph = SimpleDirectedWeightedGraph<SimpleItemPredicate, FractionUnweightedEdge>(null) {
             FractionUnweightedEdge(Fraction.ZERO)
         }

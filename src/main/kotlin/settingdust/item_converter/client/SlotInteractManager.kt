@@ -8,6 +8,8 @@ import net.minecraft.client.gui.GuiComponent
 import net.minecraft.client.gui.components.Widget
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.resources.ResourceLocation
+import net.minecraftforge.api.distmarker.Dist
+import net.minecraftforge.api.distmarker.OnlyIn
 import net.minecraftforge.client.event.InputEvent
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent
@@ -23,6 +25,7 @@ import settingdust.item_converter.networking.Networking
 import thedarkcolour.kotlinforforge.forge.FORGE_BUS
 import thedarkcolour.kotlinforforge.forge.MOD_BUS
 
+@OnlyIn(Dist.CLIENT)
 object SlotInteractManager {
     var pressedTicks = 0
     var converting = false
