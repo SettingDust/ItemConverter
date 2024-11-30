@@ -6,6 +6,7 @@ import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.world.item.ItemStack
+import net.minecraftforge.registries.ForgeRegistries
 import org.apache.commons.lang3.math.Fraction
 import org.jgrapht.graph.SimpleDirectedWeightedGraph
 
@@ -31,7 +32,7 @@ data class ConvertRule(
             instance.group(
                 MoreCodecs.ITEM_STACK.fieldOf("input").forGetter { it.input },
                 MoreCodecs.ITEM_STACK.listOf().fieldOf("output").forGetter { it.output },
-                SoundEvent.CODEC.fieldOf("sound").forGetter { it.sound },
+                ForgeRegistries.SOUND_EVENTS.codec.fieldOf("sound").forGetter { it.sound },
                 Codec.FLOAT.fieldOf("pitch").forGetter { it.pitch },
                 Codec.FLOAT.fieldOf("volume").forGetter { it.volume },
                 Codec.BOOL.optionalFieldOf("bidirectional", false).forGetter { it.bidirectional }
