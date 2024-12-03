@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2024-12-03
+### :bug: Bug Fixes
+- [`da1c3c5`](https://github.com/game-design-driven/ItemConverter/commit/da1c3c51533d365483e6ad715305691c2569166e) - use the registry codec for sound event *(commit by [@SettingDust](https://github.com/SettingDust))*
+
+
 ## [0.3.1] - 2024-11-23
 ### :bug: Bug Fixes
 - [`7fbda9b`](https://github.com/game-design-driven/ItemConverter/commit/7fbda9bc106e80a47ce08b869d6175cf5376b722) - don't listen to `ClientPlayerNetworkEvent` on server *(commit by [@SettingDust](https://github.com/SettingDust))*
@@ -79,3 +84,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.2.0]: https://github.com/game-design-driven/ItemConverter/compare/0.1.1...0.2.0
 [0.3.0]: https://github.com/game-design-driven/ItemConverter/compare/0.2.0...0.3.0
 [0.3.1]: https://github.com/game-design-driven/ItemConverter/compare/0.3.0...0.3.1
+[0.3.2]: https://github.com/game-design-driven/ItemConverter/compare/0.3.1...0.3.2
